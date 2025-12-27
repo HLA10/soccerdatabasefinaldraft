@@ -9,13 +9,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { playerId, teamId } = await req.json();
+  const data = await req.json();
 
-  const updated = await prisma.player.update({
-    where: { id: playerId },
-    data: { teamId },
+  const player = await prisma.player.create({
+    data,
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json(player);
 }
+
 
