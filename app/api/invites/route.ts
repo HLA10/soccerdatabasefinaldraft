@@ -9,29 +9,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user || (user.role !== "ADMIN" && user.role !== "COACH")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { email, teamId } = await req.json();
-
-  if (!email || !teamId) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  }
+  const data = await req.json();
 
   const invite = await prisma.invite.create({
     data: {
-      email,
-      teamId,
-      invitedBy: userId,
-      status: "PENDING",
+      ...data,
+      senderId: userId,
     },
   });
 
   return NextResponse.json(invite);
 }
-
