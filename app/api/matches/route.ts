@@ -9,36 +9,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user || (user.role !== "ADMIN" && user.role !== "COACH")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { date, opponent, teamId } = await req.json();
-
-  if (!date || !opponent || !teamId) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  }
+  const data = await req.json();
 
   const match = await prisma.match.create({
-    data: {
-      date: new Date(date),
-      opponent,
-      teamId,
-    },
+    data,
   });
 
   return NextResponse.json(match);
 }
-
-export async function GET() {
-  const matches = await prisma.match.findMany({
-    include: { team: true, stats: true },
-  });
-
-  return NextResponse.json(matches);
-}
-
