@@ -9,14 +9,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user || user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const users = await prisma.user.findMany({
     include: { teams: true },
   });
