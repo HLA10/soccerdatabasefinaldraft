@@ -11,30 +11,10 @@ export async function POST(req: Request) {
 
   const { inviteId } = await req.json();
 
-  const invite = await prisma.invite.findUnique({
+  const invite = await prisma.invite.update({
     where: { id: inviteId },
+    data: { accepted: true, receiverId: userId },
   });
 
-  if (!invite) {
-    return NextResponse.json({ error: "Invite not found" }, { status: 404 });
-  }
-
-  // Update invite status
-  await prisma.invite.update({
-    where: { id: inviteId },
-    data: { status: "ACCEPTED" },
-  });
-
-  // Add user to team
-  await prisma.team.update({
-    where: { id: invite.teamId },
-    data: {
-      members: {
-        connect: { id: userId },
-      },
-    },
-  });
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json(invite);
 }
-
