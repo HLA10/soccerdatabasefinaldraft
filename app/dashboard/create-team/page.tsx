@@ -7,19 +7,33 @@ export default function CreateTeamPage() {
   const [message, setMessage] = useState("");
 
   async function createTeam() {
-    const res = await fetch("/api/teams", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage(data.error);
+    if (!name.trim()) {
+      setMessage("Please enter a team name");
       return;
     }
 
-    setMessage("Team created successfully!");
+    try {
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error || "Failed to create team");
+        return;
+      }
+
+      setMessage("Team created successfully!");
+      setName(""); // Clear the input
+    } catch (error) {
+      setMessage("An error occurred. Please try again.");
+      console.error("Error:", error);
+    }
   }
 
   return (
@@ -29,6 +43,11 @@ export default function CreateTeamPage() {
         placeholder="Team name"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            createTeam();
+          }
+        }}
         className="border p-2"
       />
       <button onClick={createTeam} className="ml-2 p-2 bg-blue-500 text-white">
