@@ -12,7 +12,7 @@ interface Team {
 
 // Club Logo Configuration
 // Change this path to your club logo file
-const CLUB_LOGO_PATH = "/club-logo.png"; // Place your logo in the public folder
+const CLUB_LOGO_PATH = "/club-logo.png.jpg"; // Place your logo in the public folder
 
 export default function Sidebar() {
   const pathname = usePathname();
