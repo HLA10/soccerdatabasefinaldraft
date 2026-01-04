@@ -8,12 +8,14 @@ export default function Button({
   variant = "primary",
   className = "",
   type = "button",
+  disabled = false,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "outline";
   className?: string;
   type?: "button" | "submit" | "reset";
+  disabled?: boolean;
 }) {
   const base =
     "px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2";
@@ -29,11 +31,16 @@ export default function Button({
       "border-2 border-blue-600 text-blue-600 hover:bg-blue-50 active:scale-95",
   };
 
+  const disabledStyles = disabled
+    ? "opacity-50 cursor-not-allowed hover:shadow-md hover:from-blue-600 hover:to-blue-700"
+    : "";
+
   return (
     <button
       type={type}
       onClick={onClick}
-      className={`${base} ${variants[variant]} ${className}`}
+      disabled={disabled}
+      className={`${base} ${variants[variant]} ${disabledStyles} ${className}`}
     >
       {children}
     </button>
