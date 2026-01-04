@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/users")
@@ -17,8 +24,8 @@ export default function AdminDashboard() {
       body: JSON.stringify({ targetUserId: userId, role }),
     });
 
-    setUsers((prevUsers: any[]) =>
-      prevUsers.map((u: any) =>
+    setUsers((prevUsers) =>
+      prevUsers.map((u) =>
         u.id === userId ? { ...u, role } : u
       )
     );
@@ -28,7 +35,7 @@ export default function AdminDashboard() {
     <div>
       <h1>Admin Dashboard</h1>
 
-      {users.map((user: any) => (
+      {users.map((user) => (
         <div key={user.id} className="border p-4 mb-4">
           <p><strong>{user.name}</strong> ({user.email})</p>
           <p>Current role: {user.role}</p>
