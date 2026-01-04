@@ -1,28 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import Button from "@/components/ui/Button";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[#F9FAFB]">
       <div className="w-full max-w-md space-y-8 text-center">
-        <h1 className="text-4xl font-bold">Soccer Database</h1>
-        <p className="text-lg text-gray-600">
-          Full club management platform
-        </p>
+        <div>
+          <h1 className="text-4xl font-bold text-[#111827] mb-3">Soccer Hub</h1>
+          <p className="text-lg text-[#6B7280]">
+            Full club management platform
+          </p>
+        </div>
         
         <SignedOut>
           <div className="flex flex-col gap-4">
-            <Link
-              href="/sign-in"
-              className="rounded bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
-            >
-              Sign In
+            <Link href="/sign-in">
+              <Button className="w-full">Sign In</Button>
             </Link>
-            <Link
-              href="/sign-up"
-              className="rounded border border-blue-600 px-6 py-3 text-blue-600 hover:bg-blue-50"
-            >
-              Sign Up
+            <Link href="/sign-up">
+              <Button variant="outline" className="w-full">Sign Up</Button>
             </Link>
           </div>
         </SignedOut>
@@ -30,11 +29,8 @@ export default function Home() {
         <SignedIn>
           <div className="flex flex-col items-center gap-4">
             <UserButton />
-            <Link
-              href="/dashboard"
-              className="rounded bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
-            >
-              Go to Dashboard
+            <Link href="/dashboard">
+              <Button className="w-full">Go to Dashboard</Button>
             </Link>
           </div>
         </SignedIn>
