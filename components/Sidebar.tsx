@@ -121,9 +121,9 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-6 space-y-8">
-        <div>
-          <NavItem href="/dashboard" label="Home" />
-        </div>
+        <SidebarSection title="">
+          <NavItem href="/dashboard" label="Dashboard" />
+        </SidebarSection>
 
         <SidebarSection title="Club">
           <div>
