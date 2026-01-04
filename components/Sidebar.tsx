@@ -63,7 +63,7 @@ export default function Sidebar() {
         title={isCollapsed ? label : undefined}
       >
         {active && (
-          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#1A73E8] rounded-r"></div>
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#1A73E8] rounded-r"></div>
         )}
         {!isCollapsed && <span>{label}</span>}
         {isCollapsed && (
@@ -136,7 +136,7 @@ export default function Sidebar() {
                   `}
                 >
                   {(isTeamsListPage || isTeamPage) && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#1A73E8] rounded-r"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#1A73E8] rounded-r"></div>
                   )}
                   <span>Teams</span>
                   <span className={`text-[#9CA3AF] text-xs transition-transform duration-200 ${showTeamsSubmenu ? "rotate-90" : ""}`}>
