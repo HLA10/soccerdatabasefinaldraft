@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST() {
   try {
-    const teamNames = ["F2011-A", "F2012-A"];
+    const teamNames = ["F2011-A", "F2012-A", "F2013-A"];
     const createdTeams = [];
 
     for (const teamName of teamNames) {

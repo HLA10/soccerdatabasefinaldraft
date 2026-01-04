@@ -17,16 +17,31 @@ interface Team {
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTeam, setSelectedTeam] = useState<string>("");
 
   useEffect(() => {
     fetch("/api/teams")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch teams");
+        }
+        return res.json();
+      })
       .then((data) => {
         setTeams(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((error) => {
+        console.error("Error fetching teams:", error);
+        setLoading(false);
+      });
   }, []);
+
+  const handleTeamSelect = (teamId: string) => {
+    if (teamId) {
+      window.location.href = `/dashboard/teams/${teamId}`;
+    }
+  };
 
   if (loading) {
     return (
@@ -46,9 +61,31 @@ export default function TeamsPage() {
           </h1>
           <p className="text-gray-600">Manage and view all your teams</p>
         </div>
-        <Link href="/dashboard/create-team">
-          <Button>➕ Create Team</Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          {teams.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-700">Quick Access:</label>
+              <select
+                value={selectedTeam}
+                onChange={(e) => {
+                  setSelectedTeam(e.target.value);
+                  handleTeamSelect(e.target.value);
+                }}
+                className="border border-gray-200 rounded-lg px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 font-medium text-gray-900 hover:border-gray-300 min-w-[200px]"
+              >
+                <option value="">Select a team...</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <Link href="/dashboard/create-team">
+            <Button>➕ Create Team</Button>
+          </Link>
+        </div>
       </div>
 
       {teams.length === 0 ? (
