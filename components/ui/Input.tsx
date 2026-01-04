@@ -16,15 +16,19 @@ export default function Input({
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <div className="mb-4">
-      {label && <label className="block mb-1 font-medium">{label}</label>}
+    <div className="mb-5">
+      {label && (
+        <label className="block mb-2 text-sm font-semibold text-gray-700">
+          {label}
+        </label>
+      )}
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={onChange}
         onKeyDown={onKeyDown}
-        className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:border-gray-300"
       />
     </div>
   );

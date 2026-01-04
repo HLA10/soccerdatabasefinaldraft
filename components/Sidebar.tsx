@@ -8,58 +8,89 @@ export default function Sidebar() {
 
   const linkClass = (path: string) =>
     pathname.startsWith(path)
-      ? "block p-3 bg-blue-600 text-white rounded"
-      : "block p-3 hover:bg-gray-200 rounded";
+      ? "flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-md"
+      : "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-all duration-200 hover:text-blue-600";
+
+  const iconClass = (path: string) =>
+    pathname.startsWith(path) ? "text-white" : "text-gray-400";
 
   return (
-    <div className="w-64 bg-white border-r p-4">
-      <h2 className="text-xl font-bold mb-6">Dashboard</h2>
+    <div className="w-72 bg-white border-r border-gray-200 p-6 h-screen sticky top-0 overflow-y-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          ⚽ Soccer DB
+        </h1>
+        <p className="text-xs text-gray-500 mt-1">Management Platform</p>
+      </div>
 
-      <nav className="space-y-2">
+      <nav className="space-y-1">
         <Link href="/dashboard" className={linkClass("/dashboard")}>
+          <span className={iconClass("/dashboard")}>🏠</span>
           Home
         </Link>
 
-        <div className="pt-2 border-t">
-          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">View</p>
-          <Link href="/dashboard/teams" className={linkClass("/dashboard/teams")}>
-            Teams
-          </Link>
-          <Link href="/dashboard/players" className={linkClass("/dashboard/players")}>
-            Players
-          </Link>
-          <Link href="/dashboard/calendar" className={linkClass("/dashboard/calendar")}>
-            Calendar
-          </Link>
+        <div className="pt-6 pb-2">
+          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+            View & Browse
+          </p>
+          <div className="space-y-1">
+            <Link href="/dashboard/teams" className={linkClass("/dashboard/teams")}>
+              <span className={iconClass("/dashboard/teams")}>👥</span>
+              Teams
+            </Link>
+            <Link href="/dashboard/players" className={linkClass("/dashboard/players")}>
+              <span className={iconClass("/dashboard/players")}>⚽</span>
+              Players
+            </Link>
+            <Link href="/dashboard/calendar" className={linkClass("/dashboard/calendar")}>
+              <span className={iconClass("/dashboard/calendar")}>📅</span>
+              Calendar
+            </Link>
+          </div>
         </div>
 
-        <div className="pt-2 border-t">
-          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Create</p>
-          <Link href="/dashboard/create-team" className={linkClass("/dashboard/create-team")}>
-            Create Team
-          </Link>
-          <Link href="/dashboard/players/create" className={linkClass("/dashboard/players/create")}>
-            Add Player
-          </Link>
-          <Link href="/dashboard/matches/create" className={linkClass("/dashboard/matches/create")}>
-            Create Match
-          </Link>
-          <Link href="/dashboard/matches/stats" className={linkClass("/dashboard/matches/stats")}>
-            Add Stats
-          </Link>
+        <div className="pt-4 pb-2">
+          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+            Create & Add
+          </p>
+          <div className="space-y-1">
+            <Link href="/dashboard/create-team" className={linkClass("/dashboard/create-team")}>
+              <span className={iconClass("/dashboard/create-team")}>➕</span>
+              Create Team
+            </Link>
+            <Link href="/dashboard/players/create" className={linkClass("/dashboard/players/create")}>
+              <span className={iconClass("/dashboard/players/create")}>👤</span>
+              Add Player
+            </Link>
+            <Link href="/dashboard/matches/create" className={linkClass("/dashboard/matches/create")}>
+              <span className={iconClass("/dashboard/matches/create")}>🎯</span>
+              Create Match
+            </Link>
+            <Link href="/dashboard/matches/stats" className={linkClass("/dashboard/matches/stats")}>
+              <span className={iconClass("/dashboard/matches/stats")}>📊</span>
+              Add Stats
+            </Link>
+          </div>
         </div>
 
-        <div className="pt-2 border-t">
-          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Manage</p>
-          <Link href="/dashboard/invites/send" className={linkClass("/dashboard/invites/send")}>
-            Send Invite
-          </Link>
-          <Link href="/dashboard/invites" className={linkClass("/dashboard/invites")}>
-            My Invites
-          </Link>
-          <Link href="/dashboard/admin" className={linkClass("/dashboard/admin")}>
-            Admin Panel
-          </Link>
+        <div className="pt-4 pb-2">
+          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+            Management
+          </p>
+          <div className="space-y-1">
+            <Link href="/dashboard/invites/send" className={linkClass("/dashboard/invites/send")}>
+              <span className={iconClass("/dashboard/invites/send")}>📨</span>
+              Send Invite
+            </Link>
+            <Link href="/dashboard/invites" className={linkClass("/dashboard/invites")}>
+              <span className={iconClass("/dashboard/invites")}>📬</span>
+              My Invites
+            </Link>
+            <Link href="/dashboard/admin" className={linkClass("/dashboard/admin")}>
+              <span className={iconClass("/dashboard/admin")}>⚙️</span>
+              Admin Panel
+            </Link>
+          </div>
         </div>
       </nav>
     </div>

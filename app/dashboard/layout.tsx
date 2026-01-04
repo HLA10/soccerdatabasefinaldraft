@@ -7,10 +7,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-6 bg-gray-50">
+      <main className="flex-1 p-8 animate-fadeIn">
         {children}
       </main>
     </div>

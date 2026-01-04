@@ -72,20 +72,33 @@ export default function TeamDashboard() {
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <Link href="/dashboard/teams" className="text-blue-600 hover:underline mb-2 inline-block">
-          ← Back to Teams
+    <div className="max-w-7xl">
+      <div className="mb-8">
+        <Link href="/dashboard/teams" className="text-blue-600 hover:text-blue-700 font-medium mb-4 inline-flex items-center gap-2 transition-colors">
+          <span>←</span> Back to Teams
         </Link>
-        <div className="flex items-center gap-4 mt-4">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+        <div className="flex items-center gap-6 mt-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
             {team.name.charAt(0)}
           </div>
           <div>
-            <h1 className="text-3xl font-bold">{team.name}</h1>
-            <p className="text-gray-600">
-              {team.players.length} players • {team.matches.length} matches • {team.members.length} members
-            </p>
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              {team.name}
+            </h1>
+            <div className="flex flex-wrap gap-4 text-gray-600">
+              <span className="flex items-center gap-2">
+                <span>⚽</span>
+                <span className="font-semibold">{team.players.length}</span> players
+              </span>
+              <span className="flex items-center gap-2">
+                <span>🎯</span>
+                <span className="font-semibold">{team.matches.length}</span> matches
+              </span>
+              <span className="flex items-center gap-2">
+                <span>👤</span>
+                <span className="font-semibold">{team.members.length}</span> members
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -93,22 +106,32 @@ export default function TeamDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Players Section */}
         <Card>
-          <h2 className="text-xl font-bold mb-4">Players</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white">
+              ⚽
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Players</h2>
+          </div>
           {team.players.length === 0 ? (
-            <p className="text-gray-600">No players yet.</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500">No players added to this team yet.</p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {team.players.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100 hover:border-blue-200 transition-all"
                 >
                   <div>
-                    <p className="font-medium">
+                    <p className="font-semibold text-gray-900">
                       {player.firstName} {player.lastName}
                     </p>
-                    <p className="text-sm text-gray-600">{player.position}</p>
+                    <p className="text-sm text-gray-500 mt-1">{player.position}</p>
                   </div>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                    {player.position}
+                  </span>
                 </div>
               ))}
             </div>
@@ -117,11 +140,18 @@ export default function TeamDashboard() {
 
         {/* Matches Section */}
         <Card>
-          <h2 className="text-xl font-bold mb-4">Recent Matches</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
+              🎯
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Recent Matches</h2>
+          </div>
           {team.matches.length === 0 ? (
-            <p className="text-gray-600">No matches yet.</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500">No matches scheduled yet.</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {team.matches.slice(0, 5).map((match) => {
                 const totalGoals = match.stats.reduce(
                   (sum: number, stat: any) => sum + (stat.goals || 0),
@@ -130,17 +160,19 @@ export default function TeamDashboard() {
                 return (
                   <div
                     key={match.id}
-                    className="p-4 bg-gray-50 rounded border-l-4 border-blue-600"
+                    className="p-5 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100 hover:shadow-md transition-all"
                   >
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p className="font-semibold">vs {match.opponent}</p>
-                        <p className="text-sm text-gray-600">{formatDate(match.date)}</p>
+                        <p className="font-bold text-lg text-gray-900">vs {match.opponent}</p>
+                        <p className="text-sm text-gray-600 mt-1">{formatDate(match.date)}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold">{totalGoals}</p>
-                        <p className="text-xs text-gray-500">goals</p>
-                      </div>
+                      {totalGoals > 0 && (
+                        <div className="text-right">
+                          <p className="text-3xl font-bold text-green-600">{totalGoals}</p>
+                          <p className="text-xs text-gray-500 font-medium">goals</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
