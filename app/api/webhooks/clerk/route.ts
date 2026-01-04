@@ -39,7 +39,8 @@ export async function POST(req: Request) {
   if (evt.type === "user.created") {
     await prisma.user.create({
       data: {
-        id,
+        id: id,
+        clerkId: id,
         email: email_addresses[0].email_address,
         name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
         role: "SCOUT", // default role

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const { targetUserId, role } = await req.json();
 
   const updated = await prisma.user.update({
-    where: { clerkId: targetUserId },
+    where: { id: targetUserId },
     data: { role },
   });
 

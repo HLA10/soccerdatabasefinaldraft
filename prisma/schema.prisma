@@ -7,5 +7,107 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SCOUT
+  COACH
+  ADMIN
+}
+
+enum Position {
+  GK
+  DF
+  MF
+  FW
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String?  @unique
+  email     String   @unique
+  name      String?
+  role      Role     @default(SCOUT)
+  teams     Team[]   @relation("TeamMembers")
+  sentInvites Invite[] @relation("InviteSender")
+  receivedInvites Invite[] @relation("InviteReceiver")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  members     User[]   @relation("TeamMembers")
+  players     Player[]
+  matches     Match[]
+  invites     Invite[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("teams")
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  position  Position
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  stats     MatchStats[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("players")
+}
+
+model Match {
+  id        String      @id @default(cuid())
+  date      DateTime
+  opponent  String
+  teamId    String
+  team      Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  stats     MatchStats[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("matches")
+}
+
+model MatchStats {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  goals     Int      @default(0)
+  assists   Int      @default(0)
+  minutes   Int      @default(0)
+  rating    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, matchId])
+  @@map("match_stats")
+}
+
+model Invite {
+  id         String   @id @default(cuid())
+  email      String
+  teamId     String
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("InviteSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String?
+  receiver   User?    @relation("InviteReceiver", fields: [receiverId], references: [id], onDelete: SetNull)
+  accepted   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("invites")
 }
