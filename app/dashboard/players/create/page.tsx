@@ -81,7 +81,8 @@ export default function CreatePlayerPage() {
           </p>
         </div>
       )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 

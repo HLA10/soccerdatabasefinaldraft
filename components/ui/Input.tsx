@@ -7,6 +7,7 @@ export default function Input({
   type = "text",
   placeholder = "",
   onKeyDown,
+  step,
 }: {
   label?: string;
   value: any;
@@ -14,6 +15,7 @@ export default function Input({
   type?: string;
   placeholder?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  step?: string;
 }) {
   return (
     <div className="mb-5">
@@ -28,6 +30,7 @@ export default function Input({
         placeholder={placeholder}
         onChange={onChange}
         onKeyDown={onKeyDown}
+        step={step}
         className="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:border-gray-300"
       />
     </div>

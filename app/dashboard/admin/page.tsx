@@ -16,12 +16,22 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetch("/api/admin/users")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((error) => {
+            throw new Error(error.error || "Failed to fetch users");
+          });
+        }
+        return res.json();
+      })
       .then((data) => {
         setUsers(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((error) => {
+        console.error("Error fetching users:", error);
+        setLoading(false);
+      });
   }, []);
 
   async function updateRole(userId: string, role: string) {
@@ -48,9 +58,17 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div>
-        <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-        <p>Loading...</p>
+      <div className="max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-gray-600">Manage user roles and permissions</p>
+        </div>
+        <Card className="max-w-lg mx-auto text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading users...</p>
+        </Card>
       </div>
     );
   }

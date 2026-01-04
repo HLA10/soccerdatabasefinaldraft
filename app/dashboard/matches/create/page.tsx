@@ -102,7 +102,8 @@ export default function CreateMatchPage() {
           </p>
         </div>
       )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 

@@ -90,7 +90,8 @@ export default function CreateTeamPage() {
           </p>
         </div>
       )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 
