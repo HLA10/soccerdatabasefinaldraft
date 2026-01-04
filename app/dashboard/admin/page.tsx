@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/users")
