@@ -23,6 +23,13 @@ enum Position {
   FW
 }
 
+enum InjuryStatus {
+  FIT
+  QUESTIONABLE
+  INJURED
+  RECOVERING
+}
+
 model User {
   id        String   @id @default(cuid())
   clerkId   String?  @unique
@@ -52,15 +59,18 @@ model Team {
 }
 
 model Player {
-  id        String   @id @default(cuid())
-  firstName String
-  lastName  String
-  position  Position
-  teamId    String?
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  stats     MatchStats[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String        @id @default(cuid())
+  firstName     String
+  lastName      String
+  dateOfBirth   DateTime?
+  position      Position
+  profileImageUrl String?
+  injuryStatus  InjuryStatus? @default(FIT)
+  teamId        String?
+  team          Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  stats         MatchStats[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@map("players")
 }
