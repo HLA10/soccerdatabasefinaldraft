@@ -28,8 +28,20 @@ export default function CreatePlayerPage() {
   }
 
   return (
-    <Card className="max-w-lg">
-      <h1 className="text-xl font-bold mb-4">Create Player</h1>
+    <div className="max-w-2xl">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+          Add Player
+        </h1>
+        <p className="text-gray-600">Add a new player to your organization</p>
+      </div>
+      <Card className="max-w-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center text-white text-xl">
+            ⚽
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Player Information</h2>
+        </div>
 
       <Input
         label="First Name"
@@ -57,9 +69,16 @@ export default function CreatePlayerPage() {
         </select>
       </div>
 
-      <Button onClick={createPlayer}>Create Player</Button>
+      <Button onClick={createPlayer} className="w-full mt-2">Create Player</Button>
 
-      {message && <p className="mt-4 text-green-600">{message}</p>}
+      {message && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-700 font-medium flex items-center gap-2">
+            <span>✓</span>
+            {message}
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
