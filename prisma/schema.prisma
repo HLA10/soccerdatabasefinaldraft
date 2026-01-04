@@ -30,6 +30,14 @@ enum InjuryStatus {
   RECOVERING
 }
 
+enum TalkCategory {
+  TECHNICAL
+  TACTICAL
+  PHYSICAL
+  MENTAL
+  BEHAVIOR
+}
+
 model User {
   id        String   @id @default(cuid())
   clerkId   String?  @unique
@@ -39,6 +47,7 @@ model User {
   teams     Team[]   @relation("TeamMembers")
   sentInvites Invite[] @relation("InviteSender")
   receivedInvites Invite[] @relation("InviteReceiver")
+  developmentTalks DevelopmentTalk[] @relation("TalkCoach")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -69,6 +78,7 @@ model Player {
   teamId        String?
   team          Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
   stats         MatchStats[]
+  developmentTalks DevelopmentTalk[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -119,4 +129,22 @@ model Invite {
   updatedAt  DateTime @updatedAt
 
   @@map("invites")
+}
+
+model DevelopmentTalk {
+  id          String       @id @default(cuid())
+  playerId    String
+  player      Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coachId     String
+  coach       User         @relation("TalkCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  category    TalkCategory
+  notes       String
+  goals       String?
+  actionPoints String?
+  attachments String[]     @default([])
+  followUpDate DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("development_talks")
 }

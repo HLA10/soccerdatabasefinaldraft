@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 
 interface Player {
   id: string;
@@ -32,7 +33,7 @@ interface Player {
   }>;
 }
 
-type Tab = "overview" | "matches" | "training" | "medical" | "notes";
+type Tab = "overview" | "matches" | "training" | "medical" | "notes" | "development-talks";
 
 export default function PlayerProfilePage() {
   const params = useParams();
@@ -40,6 +41,18 @@ export default function PlayerProfilePage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [talks, setTalks] = useState<any[]>([]);
+  const [loadingTalks, setLoadingTalks] = useState(false);
+  const [showTalkForm, setShowTalkForm] = useState(false);
+  
+  // Form state
+  const [talkCategory, setTalkCategory] = useState("TECHNICAL");
+  const [talkNotes, setTalkNotes] = useState("");
+  const [talkGoals, setTalkGoals] = useState("");
+  const [talkActionPoints, setTalkActionPoints] = useState("");
+  const [talkFollowUpDate, setTalkFollowUpDate] = useState("");
+  const [talkAttachments, setTalkAttachments] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -59,6 +72,119 @@ export default function PlayerProfilePage() {
         });
     }
   }, [params.id]);
+
+  useEffect(() => {
+    if (params.id && activeTab === "development-talks") {
+      loadTalks();
+    }
+  }, [params.id, activeTab]);
+
+  const loadTalks = async () => {
+    if (!params.id) return;
+    setLoadingTalks(true);
+    try {
+      const res = await fetch(`/api/players/${params.id}/talks`);
+      if (res.ok) {
+        const data = await res.json();
+        setTalks(data);
+      }
+    } catch (error) {
+      console.error("Error loading talks:", error);
+    } finally {
+      setLoadingTalks(false);
+    }
+  };
+
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setTalkAttachments(Array.from(e.target.files));
+    }
+  };
+
+  const uploadAttachments = async (): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (const file of talkAttachments) {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          uploadedUrls.push(data.url);
+        }
+      } catch (error) {
+        console.error("Error uploading attachment:", error);
+      }
+    }
+
+    return uploadedUrls;
+  };
+
+  const handleSubmitTalk = async () => {
+    if (!talkNotes.trim()) {
+      alert("Notes are required");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Upload attachments if any
+      const attachmentUrls = await uploadAttachments();
+
+      // Create the talk
+      const res = await fetch(`/api/players/${params.id}/talks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          category: talkCategory,
+          notes: talkNotes,
+          goals: talkGoals || null,
+          actionPoints: talkActionPoints || null,
+          attachments: attachmentUrls,
+          followUpDate: talkFollowUpDate || null,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create development talk");
+      }
+
+      // Reset form
+      setTalkNotes("");
+      setTalkGoals("");
+      setTalkActionPoints("");
+      setTalkFollowUpDate("");
+      setTalkAttachments([]);
+      setShowTalkForm(false);
+
+      // Reload talks
+      loadTalks();
+    } catch (error) {
+      console.error("Error creating talk:", error);
+      alert("Failed to create development talk. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, { bg: string; text: string; label: string }> = {
+      TECHNICAL: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]", label: "Technical" },
+      TACTICAL: { bg: "bg-[#D1FAE5]", text: "text-[#065F46]", label: "Tactical" },
+      PHYSICAL: { bg: "bg-[#FEE2E2]", text: "text-[#991B1B]", label: "Physical" },
+      MENTAL: { bg: "bg-[#F5F3FF]", text: "text-[#6D28D9]", label: "Mental" },
+      BEHAVIOR: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]", label: "Behavior" },
+    };
+    return colors[category] || colors.TECHNICAL;
+  };
 
   if (loading) {
     return (
@@ -121,6 +247,7 @@ export default function PlayerProfilePage() {
     { id: "matches", label: "Matches" },
     { id: "training", label: "Training" },
     { id: "medical", label: "Medical" },
+    { id: "development-talks", label: "Development Talks" },
     { id: "notes", label: "Notes" },
   ];
 
@@ -325,6 +452,206 @@ export default function PlayerProfilePage() {
                 </span>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === "development-talks" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-semibold text-[#111827]">Development Talks</h2>
+              <Button onClick={() => setShowTalkForm(!showTalkForm)}>
+                {showTalkForm ? "Cancel" : "New Talk"}
+              </Button>
+            </div>
+
+            {/* New Talk Form */}
+            {showTalkForm && (
+              <Card className="mb-6 bg-[#F9FAFB]">
+                <h3 className="text-base font-semibold text-[#111827] mb-4">Record Development Talk</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-[#111827]">
+                      Category *
+                    </label>
+                    <select
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm"
+                      value={talkCategory}
+                      onChange={(e) => setTalkCategory(e.target.value)}
+                    >
+                      <option value="TECHNICAL">Technical</option>
+                      <option value="TACTICAL">Tactical</option>
+                      <option value="PHYSICAL">Physical</option>
+                      <option value="MENTAL">Mental</option>
+                      <option value="BEHAVIOR">Behavior</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-[#111827]">
+                      Notes *
+                    </label>
+                    <textarea
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm min-h-[120px]"
+                      value={talkNotes}
+                      onChange={(e) => setTalkNotes(e.target.value)}
+                      placeholder="Record your 1-on-1 development conversation..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-[#111827]">
+                      Goals (Optional)
+                    </label>
+                    <textarea
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm min-h-[80px]"
+                      value={talkGoals}
+                      onChange={(e) => setTalkGoals(e.target.value)}
+                      placeholder="Development goals discussed..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-[#111827]">
+                      Action Points (Optional)
+                    </label>
+                    <textarea
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm min-h-[80px]"
+                      value={talkActionPoints}
+                      onChange={(e) => setTalkActionPoints(e.target.value)}
+                      placeholder="Action items and next steps..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-2 text-sm font-medium text-[#111827]">
+                        Follow-up Date (Optional)
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm"
+                        value={talkFollowUpDate}
+                        onChange={(e) => setTalkFollowUpDate(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-2 text-sm font-medium text-[#111827]">
+                        Attachments (PDFs, Images, Videos)
+                      </label>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.mp4,.mov"
+                        onChange={handleAttachmentChange}
+                        className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB]"
+                      />
+                      {talkAttachments.length > 0 && (
+                        <p className="mt-2 text-xs text-[#6B7280]">
+                          {talkAttachments.length} file(s) selected
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button variant="secondary" onClick={() => setShowTalkForm(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSubmitTalk} disabled={submitting}>
+                      {submitting ? "Saving..." : "Save Talk"}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Talks List */}
+            {loadingTalks ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent mx-auto mb-4"></div>
+                <p className="text-sm text-[#6B7280]">Loading development talks...</p>
+              </div>
+            ) : talks.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-[#6B7280] mb-4">No development talks recorded yet.</p>
+                <Button onClick={() => setShowTalkForm(true)}>Record First Talk</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {talks.map((talk) => {
+                  const categoryColors = getCategoryColor(talk.category);
+                  return (
+                    <Card key={talk.id} className="border-l-4 border-[#E5E7EB]">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColors.bg} ${categoryColors.text}`}>
+                            {categoryColors.label}
+                          </span>
+                          <span className="text-sm text-[#6B7280]">
+                            {new Date(talk.createdAt).toLocaleDateString()}
+                          </span>
+                          {talk.coach && (
+                            <span className="text-sm text-[#6B7280]">
+                              by {talk.coach.name || talk.coach.email}
+                            </span>
+                          )}
+                        </div>
+                        {talk.followUpDate && (
+                          <div className="text-right">
+                            <p className="text-xs text-[#6B7280]">Follow-up:</p>
+                            <p className="text-sm font-medium text-[#111827]">
+                              {new Date(talk.followUpDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280] mb-1">Notes</p>
+                          <p className="text-[#111827] whitespace-pre-wrap">{talk.notes}</p>
+                        </div>
+
+                        {talk.goals && (
+                          <div>
+                            <p className="text-sm font-medium text-[#6B7280] mb-1">Goals</p>
+                            <p className="text-[#111827] whitespace-pre-wrap">{talk.goals}</p>
+                          </div>
+                        )}
+
+                        {talk.actionPoints && (
+                          <div>
+                            <p className="text-sm font-medium text-[#6B7280] mb-1">Action Points</p>
+                            <p className="text-[#111827] whitespace-pre-wrap">{talk.actionPoints}</p>
+                          </div>
+                        )}
+
+                        {talk.attachments && talk.attachments.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-[#6B7280] mb-2">Attachments</p>
+                            <div className="flex flex-wrap gap-2">
+                              {talk.attachments.map((url: string, index: number) => (
+                                <a
+                                  key={index}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 bg-[#F3F4F6] hover:bg-[#E5E7EB] rounded-lg text-sm text-[#111827] transition-colors"
+                                >
+                                  📎 Attachment {index + 1}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
