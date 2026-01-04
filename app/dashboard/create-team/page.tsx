@@ -1,14 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
 
 export default function CreateTeamPage() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   async function createTeam() {
+    setError("");
+    setMessage("");
+
     if (!name.trim()) {
-      setMessage("Please enter a team name");
+      setError("Please enter a team name");
       return;
     }
 
@@ -24,37 +31,40 @@ export default function CreateTeamPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.error || "Failed to create team");
+        setError(data.error || "Failed to create team");
         return;
       }
 
       setMessage("Team created successfully!");
       setName(""); // Clear the input
     } catch (error) {
-      setMessage("An error occurred. Please try again.");
+      setError("An error occurred. Please try again.");
       console.error("Error:", error);
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      createTeam();
+    }
+  };
+
   return (
-    <div>
-      <h1>Create a Team</h1>
-      <input
-        placeholder="Team name"
+    <Card className="max-w-lg">
+      <h1 className="text-xl font-bold mb-4">Create a Team</h1>
+
+      <Input
+        label="Team Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            createTeam();
-          }
-        }}
-        className="border p-2"
+        onKeyDown={handleKeyDown}
       />
-      <button onClick={createTeam} className="ml-2 p-2 bg-blue-500 text-white">
-        Create
-      </button>
-      {message && <p className="mt-4">{message}</p>}
-    </div>
+
+      <Button onClick={createTeam}>Create</Button>
+
+      {message && <p className="mt-4 text-green-600">{message}</p>}
+      {error && <p className="mt-4 text-red-600">{error}</p>}
+    </Card>
   );
 }
 

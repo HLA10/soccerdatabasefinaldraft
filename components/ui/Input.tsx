@@ -6,12 +6,14 @@ export default function Input({
   onChange,
   type = "text",
   placeholder = "",
+  onKeyDown,
 }: {
   label?: string;
   value: any;
   onChange: (e: any) => void;
   type?: string;
   placeholder?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <div className="mb-4">
@@ -21,6 +23,7 @@ export default function Input({
         value={value}
         placeholder={placeholder}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500"
       />
     </div>

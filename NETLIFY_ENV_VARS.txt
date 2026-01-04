@@ -1,0 +1,11 @@
+# Add these environment variables in Netlify Dashboard:
+# Go to: Site Settings → Environment Variables → Add variable
+
+DATABASE_URL=postgresql://neondb_owner:npg_eo2Rskuh7WdD@ep-round-credit-ab6tev7f-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+CLERK_SECRET_KEY=sk_test_1Rur84xDTMRIFN4p8SghDlafmiRKFlFk6ljb2aVsAD
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_a2Vlbi1jcmFiLTY1LmNsZXJrLmFjY291bnRzLmRldiQ
+
+CLERK_WEBHOOK_SECRET=whsec_R4kmy0oVkG9op3oyoisY3AG+ZBhUuT53
+
