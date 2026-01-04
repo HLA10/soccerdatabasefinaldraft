@@ -113,10 +113,7 @@ export default function TeamsPage() {
       />
 
       {teams.length === 0 ? (
-        <Card className="text-center py-12">
-          <div className="w-16 h-16 bg-[#EBF4FF] rounded-full flex items-center justify-center text-3xl mb-4 mx-auto">
-            👥
-          </div>
+        <Card className="text-center py-12 px-6">
           <h3 className="text-lg font-semibold mb-2 text-[#111827]">No teams yet</h3>
           <p className="text-sm text-[#6B7280] mb-6">Create your first team to get started!</p>
           <Link href="/dashboard/create-team">

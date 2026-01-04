@@ -148,18 +148,15 @@ export default function PlayersPage() {
         }
       />
 
-      {players.length === 0 ? (
-        <Card className="text-center py-12">
-          <div className="w-16 h-16 bg-[#ECFDF5] rounded-full flex items-center justify-center text-3xl mb-4 mx-auto">
-            ⚽
-          </div>
-          <h3 className="text-lg font-semibold mb-2 text-[#111827]">No players yet</h3>
-          <p className="text-sm text-[#6B7280] mb-6">Add your first player to get started!</p>
-          <Link href="/dashboard/players/create">
-            <Button>Add Your First Player</Button>
-          </Link>
-        </Card>
-      ) : (
+          {players.length === 0 ? (
+            <Card className="text-center py-12 px-6">
+              <h3 className="text-lg font-semibold mb-2 text-[#111827]">No players yet</h3>
+              <p className="text-sm text-[#6B7280] mb-6">Add your first player to get started!</p>
+              <Link href="/dashboard/players/create">
+                <Button>Add Your First Player</Button>
+              </Link>
+            </Card>
+          ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {players.map((player) => {
             const goals = getTotalGoals(player.stats);
@@ -190,7 +187,7 @@ export default function PlayersPage() {
                       {/* Injury Status Badge */}
                       {player.injuryStatus && player.injuryStatus !== "FIT" && (
                         <div className={`absolute -bottom-1 -right-1 w-6 h-6 ${injuryStatus.bg} rounded-full border-2 border-white flex items-center justify-center`} title={injuryStatus.label}>
-                          <span className="text-xs">⚠️</span>
+                          <div className={`w-2 h-2 rounded-full ${injuryStatus.text.replace('text-', 'bg-')}`}></div>
                         </div>
                       )}
                     </div>

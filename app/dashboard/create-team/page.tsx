@@ -52,17 +52,15 @@ export default function CreateTeamPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-semibold mb-1 text-[#111827]">
           Create a Team
         </h1>
-        <p className="text-gray-600">Add a new team to your organization</p>
+        <p className="text-sm text-[#6B7280]">Add a new team to your organization</p>
       </div>
       <Card className="max-w-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
-            👥
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">Team Information</h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-[#111827]">Team Information</h2>
+          <p className="text-sm text-[#6B7280] mt-1">Add a new team to your organization</p>
         </div>
 
       <Input
@@ -75,17 +73,15 @@ export default function CreateTeamPage() {
       <Button onClick={createTeam} className="w-full mt-2">Create Team</Button>
 
       {message && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-700 font-medium flex items-center gap-2">
-            <span>✓</span>
+        <div className="mt-4 p-4 bg-[#ECFDF5] border border-[#10B981] rounded-lg">
+          <p className="text-[#065F46] font-medium text-sm">
             {message}
           </p>
         </div>
       )}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 font-medium flex items-center gap-2">
-            <span>✕</span>
+        <div className="mt-4 p-4 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
+          <p className="text-[#991B1B] font-medium text-sm">
             {error}
           </p>
         </div>

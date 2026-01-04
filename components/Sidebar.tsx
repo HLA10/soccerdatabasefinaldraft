@@ -121,102 +121,26 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-6 space-y-8">
-        <SidebarSection title="">
+        <SidebarSection title="Main">
           <NavItem href="/dashboard" label="Dashboard" />
+          <NavItem href="/dashboard/calendar" label="Calendar" />
         </SidebarSection>
 
-        <SidebarSection title="Club">
-          <div>
-            {!isCollapsed ? (
-              <div>
-                <button
-                  onClick={() => setShowTeamsSubmenu(!showTeamsSubmenu)}
-                  className={`
-                    relative w-full flex items-center justify-between px-4 py-3 text-sm font-medium
-                    transition-all duration-200
-                    ${isTeamsListPage || isTeamPage
-                      ? "text-[#111827] font-semibold"
-                      : "text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
-                    }
-                  `}
-                >
-                  {(isTeamsListPage || isTeamPage) && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#1A73E8] rounded-r"></div>
-                  )}
-                  <span>Teams</span>
-                  <span className={`text-[#9CA3AF] text-xs transition-transform duration-200 ${showTeamsSubmenu ? "rotate-90" : ""}`}>
-                    ›
-                  </span>
-                </button>
-                
-                {showTeamsSubmenu && (
-                  <div className="ml-6 mt-1 space-y-1 border-l border-[#E5E7EB] pl-4">
-                    <Link
-                      href="/dashboard/teams"
-                      className={`
-                        block px-3 py-2 text-sm transition-all duration-200
-                        ${isTeamsListPage
-                          ? "text-[#1A73E8] font-medium"
-                          : "text-[#6B7280] hover:text-[#111827]"
-                        }
-                      `}
-                    >
-                      All Teams
-                    </Link>
-                    {teams.length > 0 && (
-                      <>
-                        <div className="h-px bg-[#E5E7EB] my-1"></div>
-                        {teams.map((team) => {
-                          const isActive = pathname === `/dashboard/teams/${team.id}`;
-                          return (
-                            <Link
-                              key={team.id}
-                              href={`/dashboard/teams/${team.id}`}
-                              className={`
-                                block px-3 py-2 text-sm transition-all duration-200
-                                ${isActive
-                                  ? "text-[#1A73E8] font-medium"
-                                  : "text-[#6B7280] hover:text-[#111827]"
-                                }
-                              `}
-                            >
-                              {team.name}
-                            </Link>
-                          );
-                        })}
-                      </>
-                    )}
-                    {!loadingTeams && teams.length === 0 && (
-                      <div className="px-3 py-2 text-xs text-[#9CA3AF]">
-                        No teams
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <span className="text-[#6B7280] text-xs font-medium">T</span>
-              </div>
-            )}
-            <NavItem href="/dashboard/players" label="Players" />
-            <NavItem href="/dashboard/calendar" label="Calendar" />
-          </div>
+        <SidebarSection title="Team">
+          <NavItem href="/dashboard/matches" label="Matches" />
+          <NavItem href="/dashboard/training" label="Training" />
         </SidebarSection>
 
-        <SidebarSection title="Create">
-          <div>
-            <NavItem href="/dashboard/create-team" label="Create Team" />
-            <NavItem href="/dashboard/players/create" label="Add Player" />
-            <NavItem href="/dashboard/matches/create" label="Schedule Match" />
-          </div>
+        <SidebarSection title="Performance">
+          <NavItem href="/dashboard/players" label="Players" />
+          <NavItem href="/dashboard/stats" label="Stats" />
+          <NavItem href="/dashboard/analytics" label="Analytics" />
         </SidebarSection>
 
         <SidebarSection title="Admin">
-          <div>
-            <NavItem href="/dashboard/invites" label="Invites" />
-            <NavItem href="/dashboard/admin" label="Admin Panel" />
-          </div>
+          <NavItem href="/dashboard/teams" label="Teams" />
+          <NavItem href="/dashboard/invites" label="Invites" />
+          <NavItem href="/dashboard/admin" label="Admin Panel" />
         </SidebarSection>
 
         {/* Club Logo Section */}

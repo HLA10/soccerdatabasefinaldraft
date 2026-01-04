@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface Player {
   id: string;
@@ -11,6 +12,7 @@ interface Player {
   lastName: string;
   position: string;
   profileImageUrl?: string | null;
+  injuryStatus?: string | null;
   team?: {
     id: string;
     name: string;
@@ -70,37 +72,52 @@ export default function DashboardHome() {
     };
   };
 
-  // Top 5 assists
+  // Calculate dashboard stats
+  const totalPlayers = players.length;
+  const totalGames = matches.length;
+  const totalGoals = players.reduce((sum, player) => sum + getPlayerStats(player).goals, 0);
+  const totalOpponentGoals = 0; // Would need opponent goals data
+  const goalDifference = totalGoals - totalOpponentGoals;
+  
+  // Calculate win rate (simplified - would need actual results)
+  const wins = Math.floor(totalGames * 0.6); // Placeholder
+  const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+  
+  // Attendance rate (placeholder)
+  const attendanceRate = 85; // Would need actual attendance data
+  
+  // Active issues (injuries)
+  const activeIssues = players.filter(p => p.injuryStatus && p.injuryStatus !== "FIT").length;
+  
+  // Top scorer
+  const topScorer = [...players]
+    .map((player) => ({ ...player, totalGoals: getPlayerStats(player).goals }))
+    .sort((a, b) => b.totalGoals - a.totalGoals)[0];
+
+  // Recent matches (last 5-6)
+  const now = new Date();
+  const recentMatches = [...matches]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 6);
+
+  // Top scorers
+  const topScorers = [...players]
+    .map((player) => ({ ...player, totalGoals: getPlayerStats(player).goals }))
+    .sort((a, b) => b.totalGoals - a.totalGoals)
+    .slice(0, 5);
+
+  // Top assists
   const topAssists = [...players]
     .map((player) => ({ ...player, totalAssists: getPlayerStats(player).assists }))
     .sort((a, b) => b.totalAssists - a.totalAssists)
     .slice(0, 5);
 
-  // Top 5 minutes played
-  const topMinutes = [...players]
-    .map((player) => ({ ...player, totalMinutes: getPlayerStats(player).minutes }))
-    .sort((a, b) => b.totalMinutes - a.totalMinutes)
-    .slice(0, 5);
-
-  // Upcoming matches (next 3-5)
-  const now = new Date();
-  const upcomingMatches = [...matches]
-    .filter((match) => new Date(match.date) >= now)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
-
-  // Previous match (most recent past match)
-  const previousMatch = [...matches]
-    .filter((match) => new Date(match.date) < now)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  // Players with injuries
+  const injuredPlayers = players.filter(p => p.injuryStatus && p.injuryStatus !== "FIT");
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      time: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-      full: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-    };
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
   const getPositionColor = (position: string) => {
@@ -113,314 +130,344 @@ export default function DashboardHome() {
     return colors[position] || { bg: "bg-[#F3F4F6]", text: "text-[#374151]" };
   };
 
+  const getInjuryStatusColor = (status: string | null | undefined) => {
+    const colors: Record<string, { bg: string; text: string }> = {
+      QUESTIONABLE: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]" },
+      INJURED: { bg: "bg-[#FEE2E2]", text: "text-[#991B1B]" },
+      RECOVERING: { bg: "bg-[#DBEAFE]", text: "text-[#1E40AF]" },
+    };
+    return colors[status || ""] || { bg: "bg-[#FEE2E2]", text: "text-[#991B1B]" };
+  };
+
   if (loading) {
     return (
-      <div className="max-w-[1400px]">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-[#111827] mb-1">Dashboard</h1>
-          <p className="text-sm text-[#6B7280]">Loading dashboard data...</p>
+      <div className="max-w-[1600px]">
+        <DashboardHeader />
+        <div className="p-6">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent"></div>
+          </div>
         </div>
-        <Card className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-sm text-[#6B7280]">Loading...</p>
-        </Card>
       </div>
     );
   }
 
-  // Calculate team goals for previous match
-  const getTeamGoals = (match: Match) => {
-    return match.stats.reduce((sum, stat) => sum + (stat.goals || 0), 0);
-  };
-
-  // Get standout players (top scorers) from previous match
-  const getStandoutPlayers = (match: Match) => {
-    return [...match.stats]
-      .filter((stat) => stat.goals > 0)
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 3);
-  };
-
   return (
-    <div className="max-w-[1400px]">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[#111827] mb-1">Dashboard</h1>
-        <p className="text-sm text-[#6B7280]">Overview of your club performance and upcoming events</p>
-      </div>
+    <div className="max-w-[1600px]">
+      <DashboardHeader />
 
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Top Assists */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Top Assists</h2>
-            <p className="text-xs text-[#6B7280]">Players with most assists this season</p>
-          </div>
-          {topAssists.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-[#9CA3AF]">No assist data available</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {topAssists.map((player, index) => {
-                const positionColors = getPositionColor(player.position);
-                const stats = getPlayerStats(player);
-                return (
-                  <Link
-                    key={player.id}
-                    href={`/dashboard/players/${player.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group"
-                  >
-                    <div className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
-                      {player.profileImageUrl ? (
-                        <Image
-                          src={player.profileImageUrl}
-                          alt={`${player.firstName} ${player.lastName}`}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] text-sm font-semibold">
-                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-medium text-[#111827] truncate group-hover:text-[#1A73E8] transition-colors">
-                          {player.firstName} {player.lastName}
-                        </p>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${positionColors.bg} ${positionColors.text}`}>
-                          {player.position}
-                        </span>
-                      </div>
-                      {player.team && (
-                        <p className="text-xs text-[#6B7280] truncate">{player.team.name}</p>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-base font-semibold text-[#111827]">{stats.assists}</p>
-                      <p className="text-[10px] text-[#9CA3AF]">assists</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+      <div className="p-6 space-y-6">
+        {/* Stats Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Total Players</p>
+            <p className="text-2xl font-semibold text-[#111827]">{totalPlayers}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Total Games</p>
+            <p className="text-2xl font-semibold text-[#111827]">{totalGames}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Goal Difference</p>
+            <p className={`text-2xl font-semibold ${goalDifference >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}>
+              {goalDifference >= 0 ? "+" : ""}{goalDifference}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Attendance Rate</p>
+            <p className="text-2xl font-semibold text-[#111827]">{attendanceRate}%</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Total Goals</p>
+            <p className="text-2xl font-semibold text-[#111827]">{totalGoals}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Active Issues</p>
+            <p className={`text-2xl font-semibold ${activeIssues > 0 ? "text-[#EF4444]" : "text-[#10B981]"}`}>
+              {activeIssues}
+            </p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Win Rate</p>
+            <p className="text-2xl font-semibold text-[#111827]">{winRate}%</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-[#6B7280] mb-1">Top Scorer</p>
+            <p className="text-sm font-semibold text-[#111827] truncate">
+              {topScorer ? `${topScorer.firstName} ${topScorer.lastName}` : "N/A"}
+            </p>
+            <p className="text-xs text-[#6B7280] mt-0.5">
+              {topScorer ? `${getPlayerStats(topScorer).goals} goals` : ""}
+            </p>
+          </Card>
+        </div>
 
-        {/* Most Minutes Played */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Most Minutes Played</h2>
-            <p className="text-xs text-[#6B7280]">Players with most playing time</p>
-          </div>
-          {topMinutes.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-[#9CA3AF]">No minutes data available</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {topMinutes.map((player) => {
-                const positionColors = getPositionColor(player.position);
-                const stats = getPlayerStats(player);
-                const minutesFormatted = Math.round(stats.minutes / 90) > 0
-                  ? `${Math.round(stats.minutes / 90)} games`
-                  : `${stats.minutes} min`;
-                return (
-                  <Link
-                    key={player.id}
-                    href={`/dashboard/players/${player.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group"
-                  >
-                    <div className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
-                      {player.profileImageUrl ? (
-                        <Image
-                          src={player.profileImageUrl}
-                          alt={`${player.firstName} ${player.lastName}`}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] text-sm font-semibold">
-                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-medium text-[#111827] truncate group-hover:text-[#1A73E8] transition-colors">
-                          {player.firstName} {player.lastName}
-                        </p>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${positionColors.bg} ${positionColors.text}`}>
-                          {player.position}
-                        </span>
-                      </div>
-                      {player.team && (
-                        <p className="text-xs text-[#6B7280] truncate">{player.team.name}</p>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-base font-semibold text-[#111827]">{stats.minutes}</p>
-                      <p className="text-[10px] text-[#9CA3AF]">minutes</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Upcoming Games */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Upcoming Games</h2>
-            <p className="text-xs text-[#6B7280]">Next scheduled matches</p>
-          </div>
-          {upcomingMatches.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-[#9CA3AF]">No upcoming matches</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {upcomingMatches.map((match) => {
-                const dateInfo = formatDate(match.date);
-                return (
-                  <Link
-                    key={match.id}
-                    href={`/dashboard/calendar`}
-                    className="block p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all group"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#111827] mb-1 group-hover:text-[#1A73E8] transition-colors">
-                          vs {match.opponent}
-                        </p>
-                        <p className="text-xs text-[#6B7280]">{match.team.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-[#6B7280]">
-                      <span>{dateInfo.full}</span>
-                      <span>•</span>
-                      <span>{dateInfo.time}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Previous Game */}
-        <Card className="lg:col-span-2 xl:col-span-3">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Previous Game</h2>
-            <p className="text-xs text-[#6B7280]">Most recent match result</p>
-          </div>
-          {!previousMatch ? (
-            <div className="py-12 text-center">
-              <p className="text-sm text-[#9CA3AF]">No previous matches</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Match Result */}
-              <div className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-[#6B7280] mb-2">
-                    {previousMatch.team.name}
-                  </p>
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-3xl font-bold text-[#111827]">{getTeamGoals(previousMatch)}</p>
-                    <p className="text-lg text-[#6B7280]">-</p>
-                    <p className="text-sm text-[#6B7280]">{previousMatch.opponent}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-[#111827] mb-1">
-                    {formatDate(previousMatch.date).full}
-                  </p>
-                  <p className="text-xs text-[#6B7280]">{formatDate(previousMatch.date).time}</p>
-                </div>
-              </div>
-
-              {/* Standout Players */}
-              {getStandoutPlayers(previousMatch).length > 0 && (
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Recent Games */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-xs font-medium text-[#6B7280] mb-3 uppercase tracking-wide">
-                    Key Performers
-                  </p>
-                  <div className="flex items-center gap-3">
-                    {getStandoutPlayers(previousMatch).map((stat) => (
+                  <h2 className="text-base font-semibold text-[#111827] mb-1">Recent Games</h2>
+                  <p className="text-xs text-[#6B7280]">Last 6 matches</p>
+                </div>
+                <Link href="/dashboard/matches" className="text-sm text-[#1A73E8] hover:underline">
+                  View All
+                </Link>
+              </div>
+              {recentMatches.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-[#9CA3AF]">No matches yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentMatches.map((match) => {
+                    const teamGoals = match.stats.reduce((sum, stat) => sum + (stat.goals || 0), 0);
+                    const isPast = new Date(match.date) < now;
+                    return (
                       <Link
-                        key={stat.player.id}
-                        href={`/dashboard/players/${stat.player.id}`}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group"
+                        key={match.id}
+                        href={`/dashboard/calendar`}
+                        className="flex items-center justify-between p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all group"
                       >
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
-                          {stat.player.profileImageUrl ? (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1">
+                            <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">
+                              {match.team.name}
+                            </p>
+                            <span className="text-[#9CA3AF]">vs</span>
+                            <p className="text-sm font-medium text-[#111827]">{match.opponent}</p>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-[#6B7280]">
+                            <span>{formatDate(match.date)}</span>
+                            {isPast && (
+                              <span className="font-medium text-[#111827]">{teamGoals} - 0</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className={`text-xs px-2 py-1 rounded ${isPast ? "bg-[#ECFDF5] text-[#065F46]" : "bg-[#EBF4FF] text-[#1E40AF]"}`}>
+                            {isPast ? "Completed" : "Upcoming"}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            {/* Top Performers */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Top Scorers */}
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-base font-semibold text-[#111827] mb-1">Top Scorers</h2>
+                  <p className="text-xs text-[#6B7280]">Most goals this season</p>
+                </div>
+                {topScorers.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-[#9CA3AF]">No data available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {topScorers.map((player, index) => {
+                      const stats = getPlayerStats(player);
+                      return (
+                        <Link
+                          key={player.id}
+                          href={`/dashboard/players/${player.id}`}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group"
+                        >
+                          <div className="flex-shrink-0 w-6 text-sm font-semibold text-[#6B7280]">
+                            {index + 1}
+                          </div>
+                          <div className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
+                            {player.profileImageUrl ? (
+                              <Image
+                                src={player.profileImageUrl}
+                                alt={`${player.firstName} ${player.lastName}`}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] text-sm font-semibold">
+                                {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#111827] truncate group-hover:text-[#1A73E8] transition-colors">
+                              {player.firstName} {player.lastName}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-base font-semibold text-[#111827]">{stats.goals}</p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* Top Assists */}
+              <Card className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-base font-semibold text-[#111827] mb-1">Top Assists</h2>
+                  <p className="text-xs text-[#6B7280]">Most assists this season</p>
+                </div>
+                {topAssists.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-[#9CA3AF]">No data available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {topAssists.map((player, index) => {
+                      const stats = getPlayerStats(player);
+                      return (
+                        <Link
+                          key={player.id}
+                          href={`/dashboard/players/${player.id}`}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F9FAFB] transition-colors group"
+                        >
+                          <div className="flex-shrink-0 w-6 text-sm font-semibold text-[#6B7280]">
+                            {index + 1}
+                          </div>
+                          <div className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
+                            {player.profileImageUrl ? (
+                              <Image
+                                src={player.profileImageUrl}
+                                alt={`${player.firstName} ${player.lastName}`}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] text-sm font-semibold">
+                                {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#111827] truncate group-hover:text-[#1A73E8] transition-colors">
+                              {player.firstName} {player.lastName}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-base font-semibold text-[#111827]">{stats.assists}</p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Injury & Wellness */}
+            <Card className="p-6">
+              <div className="mb-6">
+                <h2 className="text-base font-semibold text-[#111827] mb-1">Injury & Wellness</h2>
+                <p className="text-xs text-[#6B7280]">Current issues</p>
+              </div>
+              {injuredPlayers.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-[#10B981] font-medium">All players fit</p>
+                  <p className="text-xs text-[#6B7280] mt-2">No active injuries</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {injuredPlayers.map((player) => {
+                    const injuryColors = getInjuryStatusColor(player.injuryStatus);
+                    return (
+                      <Link
+                        key={player.id}
+                        href={`/dashboard/players/${player.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all group"
+                      >
+                        <div className="flex-shrink-0 relative w-10 h-10 rounded-full overflow-hidden border border-[#E5E7EB]">
+                          {player.profileImageUrl ? (
                             <Image
-                              src={stat.player.profileImageUrl}
-                              alt={`${stat.player.firstName} ${stat.player.lastName}`}
+                              src={player.profileImageUrl}
+                              alt={`${player.firstName} ${player.lastName}`}
                               fill
                               className="object-cover"
                             />
                           ) : (
                             <div className="w-full h-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] text-sm font-semibold">
-                              {stat.player.firstName.charAt(0)}{stat.player.lastName.charAt(0)}
+                              {player.firstName.charAt(0)}{player.lastName.charAt(0)}
                             </div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">
-                            {stat.player.firstName} {stat.player.lastName}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#111827] truncate group-hover:text-[#1A73E8] transition-colors">
+                            {player.firstName} {player.lastName}
                           </p>
-                          <p className="text-xs text-[#6B7280]">
-                            {stat.goals} {stat.goals === 1 ? "goal" : "goals"}
-                            {stat.assists > 0 && ` • ${stat.assists} assist${stat.assists === 1 ? "" : "s"}`}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${injuryColors.bg} ${injuryColors.text}`}>
+                              {player.injuryStatus}
+                            </span>
+                          </div>
                         </div>
                       </Link>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
-            </div>
-          )}
-        </Card>
+            </Card>
 
-        {/* Placeholder: Team Form */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Team Form</h2>
-            <p className="text-xs text-[#6B7280]">Last 5 matches</p>
+            {/* Quick Actions */}
+            <Card className="p-6">
+              <div className="mb-6">
+                <h2 className="text-base font-semibold text-[#111827] mb-1">Quick Actions</h2>
+                <p className="text-xs text-[#6B7280]">Common tasks</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/dashboard/players"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Players</p>
+                </Link>
+                <Link
+                  href="/dashboard/matches/create"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Games</p>
+                </Link>
+                <Link
+                  href="/dashboard/training"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Training</p>
+                </Link>
+                <Link
+                  href="/dashboard/tournaments"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Tournaments</p>
+                </Link>
+                <Link
+                  href="/dashboard/stats"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Stats</p>
+                </Link>
+                <Link
+                  href="/dashboard/analytics"
+                  className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
+                >
+                  <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Analytics</p>
+                </Link>
+              </div>
+            </Card>
           </div>
-          <div className="py-8 text-center">
-            <p className="text-sm text-[#9CA3AF]">Coming soon</p>
-          </div>
-        </Card>
-
-        {/* Placeholder: Injury Summary */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Injury Summary</h2>
-            <p className="text-xs text-[#6B7280]">Current injury status</p>
-          </div>
-          <div className="py-8 text-center">
-            <p className="text-sm text-[#9CA3AF]">Coming soon</p>
-          </div>
-        </Card>
-
-        {/* Placeholder: Training Attendance */}
-        <Card className="lg:col-span-1">
-          <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#111827] mb-1">Training Attendance</h2>
-            <p className="text-xs text-[#6B7280]">Recent training sessions</p>
-          </div>
-          <div className="py-8 text-center">
-            <p className="text-sm text-[#9CA3AF]">Coming soon</p>
-          </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

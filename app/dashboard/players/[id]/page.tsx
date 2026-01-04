@@ -282,7 +282,7 @@ export default function PlayerProfilePage() {
             )}
             {player.injuryStatus && player.injuryStatus !== "FIT" && (
               <div className={`absolute -bottom-2 -right-2 w-8 h-8 ${injuryColors.bg} rounded-full border-2 border-white flex items-center justify-center`} title={injuryColors.label}>
-                <span className="text-sm">⚠️</span>
+                <div className={`w-3 h-3 rounded-full ${injuryColors.text.replace('text-', 'bg-')}`}></div>
               </div>
             )}
           </div>

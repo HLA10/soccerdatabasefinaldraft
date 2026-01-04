@@ -82,21 +82,18 @@ export default function TeamDashboard() {
             {team.name.charAt(0)}
           </div>
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-semibold mb-2 text-[#111827]">
               {team.name}
             </h1>
-            <div className="flex flex-wrap gap-4 text-gray-600">
-              <span className="flex items-center gap-2">
-                <span>⚽</span>
-                <span className="font-semibold">{team.players.length}</span> players
+            <div className="flex flex-wrap gap-6 text-[#6B7280]">
+              <span className="text-sm">
+                <span className="font-semibold text-[#111827]">{team.players.length}</span> players
               </span>
-              <span className="flex items-center gap-2">
-                <span>🎯</span>
-                <span className="font-semibold">{team.matches.length}</span> matches
+              <span className="text-sm">
+                <span className="font-semibold text-[#111827]">{team.matches.length}</span> matches
               </span>
-              <span className="flex items-center gap-2">
-                <span>👤</span>
-                <span className="font-semibold">{team.members.length}</span> members
+              <span className="text-sm">
+                <span className="font-semibold text-[#111827]">{team.members.length}</span> members
               </span>
             </div>
           </div>
@@ -140,11 +137,9 @@ export default function TeamDashboard() {
 
         {/* Matches Section */}
         <Card>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
-              🎯
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">Recent Matches</h2>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-[#111827]">Recent Matches</h2>
+            <p className="text-sm text-[#6B7280] mt-1">Match history</p>
           </div>
           {team.matches.length === 0 ? (
             <div className="text-center py-8">

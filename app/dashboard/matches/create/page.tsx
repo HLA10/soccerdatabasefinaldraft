@@ -50,17 +50,15 @@ export default function CreateMatchPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-semibold mb-1 text-[#111827]">
           Schedule Match
         </h1>
-        <p className="text-gray-600">Create a new match for your team</p>
+        <p className="text-sm text-[#6B7280]">Create a new match for your team</p>
       </div>
       <Card className="max-w-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-xl">
-            🎯
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">Match Details</h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-[#111827]">Match Details</h2>
+          <p className="text-sm text-[#6B7280] mt-1">Schedule a new match</p>
         </div>
 
       <Input
@@ -87,17 +85,15 @@ export default function CreateMatchPage() {
       <Button onClick={createMatch} className="w-full mt-2">Schedule Match</Button>
 
       {message && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-700 font-medium flex items-center gap-2">
-            <span>✓</span>
+        <div className="mt-4 p-4 bg-[#ECFDF5] border border-[#10B981] rounded-lg">
+          <p className="text-[#065F46] font-medium text-sm">
             {message}
           </p>
         </div>
       )}
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 font-medium flex items-center gap-2">
-            <span>✕</span>
+        <div className="mt-4 p-4 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
+          <p className="text-[#991B1B] font-medium text-sm">
             {error}
           </p>
         </div>
