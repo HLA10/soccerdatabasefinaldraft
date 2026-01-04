@@ -55,17 +55,19 @@ export default function CreatePlayerPage() {
         onChange={(e) => setLastName(e.target.value)}
       />
 
-      <div className="mb-4">
-        <label className="block mb-1 font-medium">Position</label>
+      <div className="mb-5">
+        <label className="block mb-2 text-sm font-semibold text-gray-700">
+          Position
+        </label>
         <select
-          className="w-full border rounded p-2"
+          className="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:border-gray-300"
           value={position}
           onChange={(e) => setPosition(e.target.value)}
         >
-          <option value="GK">Goalkeeper</option>
-          <option value="DF">Defender</option>
-          <option value="MF">Midfielder</option>
-          <option value="FW">Forward</option>
+          <option value="GK">Goalkeeper (GK)</option>
+          <option value="DF">Defender (DF)</option>
+          <option value="MF">Midfielder (MF)</option>
+          <option value="FW">Forward (FW)</option>
         </select>
       </div>
 
