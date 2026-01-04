@@ -20,33 +20,47 @@ export default function Sidebar() {
           Home
         </Link>
 
-        <Link href="/dashboard/create-team" className={linkClass("/dashboard/create-team")}>
-          Create Team
-        </Link>
+        <div className="pt-2 border-t">
+          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">View</p>
+          <Link href="/dashboard/teams" className={linkClass("/dashboard/teams")}>
+            Teams
+          </Link>
+          <Link href="/dashboard/players" className={linkClass("/dashboard/players")}>
+            Players
+          </Link>
+          <Link href="/dashboard/calendar" className={linkClass("/dashboard/calendar")}>
+            Calendar
+          </Link>
+        </div>
 
-        <Link href="/dashboard/players/create" className={linkClass("/dashboard/players")}>
-          Create Player
-        </Link>
+        <div className="pt-2 border-t">
+          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Create</p>
+          <Link href="/dashboard/create-team" className={linkClass("/dashboard/create-team")}>
+            Create Team
+          </Link>
+          <Link href="/dashboard/players/create" className={linkClass("/dashboard/players/create")}>
+            Add Player
+          </Link>
+          <Link href="/dashboard/matches/create" className={linkClass("/dashboard/matches/create")}>
+            Create Match
+          </Link>
+          <Link href="/dashboard/matches/stats" className={linkClass("/dashboard/matches/stats")}>
+            Add Stats
+          </Link>
+        </div>
 
-        <Link href="/dashboard/matches/create" className={linkClass("/dashboard/matches/create")}>
-          Create Match
-        </Link>
-
-        <Link href="/dashboard/matches/stats" className={linkClass("/dashboard/matches/stats")}>
-          Add Match Stats
-        </Link>
-
-        <Link href="/dashboard/invites/send" className={linkClass("/dashboard/invites/send")}>
-          Send Invite
-        </Link>
-
-        <Link href="/dashboard/invites" className={linkClass("/dashboard/invites")}>
-          My Invites
-        </Link>
-
-        <Link href="/dashboard/admin" className={linkClass("/dashboard/admin")}>
-          Admin Panel
-        </Link>
+        <div className="pt-2 border-t">
+          <p className="text-xs font-semibold text-gray-500 uppercase px-3 mb-2">Manage</p>
+          <Link href="/dashboard/invites/send" className={linkClass("/dashboard/invites/send")}>
+            Send Invite
+          </Link>
+          <Link href="/dashboard/invites" className={linkClass("/dashboard/invites")}>
+            My Invites
+          </Link>
+          <Link href="/dashboard/admin" className={linkClass("/dashboard/admin")}>
+            Admin Panel
+          </Link>
+        </div>
       </nav>
     </div>
   );

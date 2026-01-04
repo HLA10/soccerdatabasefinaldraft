@@ -2,6 +2,40 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET() {
+  try {
+    const teams = await prisma.team.findMany({
+      include: {
+        members: true,
+        players: true,
+        matches: {
+          include: {
+            stats: {
+              include: {
+                player: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "desc",
+          },
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return NextResponse.json(teams);
+  } catch (error: any) {
+    console.error("Error fetching teams:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch teams" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -23,6 +57,11 @@ export async function POST(req: Request) {
     const team = await prisma.team.create({
       data: {
         name: name.trim(),
+      },
+      include: {
+        members: true,
+        players: true,
+        matches: true,
       },
     });
 
