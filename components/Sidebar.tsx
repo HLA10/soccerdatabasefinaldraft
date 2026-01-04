@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
+import ClubLogo from "./ClubLogo";
 
 interface Team {
   id: string;
@@ -222,31 +223,13 @@ export default function Sidebar() {
         <div className={`px-4 pt-6 ${isCollapsed ? "px-3" : ""}`}>
           <div className={`border-t border-[#E5E7EB] pt-6 ${isCollapsed ? "flex justify-center" : ""}`}>
             {isCollapsed ? (
-              <img
-                src={CLUB_LOGO_PATH}
-                alt="Club Logo"
-                className="w-12 h-auto object-contain"
-                onError={(e) => {
-                  // Fallback if logo doesn't exist
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
+              <ClubLogo isCollapsed={true} />
             ) : (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">
                   Club
                 </p>
-                <img
-                  src={CLUB_LOGO_PATH}
-                  alt="Club Logo"
-                  className="w-24 h-auto object-contain"
-                  onError={(e) => {
-                    // Fallback if logo doesn't exist
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
+                <ClubLogo isCollapsed={false} />
               </div>
             )}
           </div>
