@@ -17,8 +17,8 @@ export default function AdminDashboard() {
       body: JSON.stringify({ targetUserId: userId, role }),
     });
 
-    setUsers(
-      users.map((u: any) =>
+    setUsers((prevUsers: any[]) =>
+      prevUsers.map((u: any) =>
         u.id === userId ? { ...u, role } : u
       )
     );
