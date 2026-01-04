@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import FormSection from "@/components/ui/FormSection";
+
+interface Team {
+  id: string;
+  name: string;
+}
 
 export default function CreatePlayerPage() {
   const router = useRouter();
@@ -15,11 +20,26 @@ export default function CreatePlayerPage() {
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [position, setPosition] = useState("FW");
+  const [teamId, setTeamId] = useState("");
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/teams")
+      .then((res) => res.json())
+      .then((data) => {
+        setTeams(data || []);
+        setLoadingTeams(false);
+      })
+      .catch(() => {
+        setLoadingTeams(false);
+      });
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +117,7 @@ export default function CreatePlayerPage() {
           lastName,
           dateOfBirth: dateOfBirth || null,
           position,
+          teamId: teamId || null,
           profileImageUrl,
           injuryStatus: "FIT",
         }),
@@ -110,6 +131,15 @@ export default function CreatePlayerPage() {
       }
 
       setMessage("Player created successfully!");
+      
+      // Reset form
+      setFirstName("");
+      setLastName("");
+      setDateOfBirth("");
+      setPosition("FW");
+      setTeamId("");
+      setProfileImage(null);
+      setProfileImagePreview(null);
       
       // Redirect to players page after short delay
       setTimeout(() => {
@@ -197,6 +227,30 @@ export default function CreatePlayerPage() {
 
             <div className="mb-5">
               <label className="block mb-2 text-sm font-medium text-[#111827]">
+                Team (Optional)
+              </label>
+              {loadingTeams ? (
+                <div className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#6B7280] bg-[#F9FAFB]">
+                  Loading teams...
+                </div>
+              ) : (
+                <select
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB] text-sm"
+                  value={teamId}
+                  onChange={(e) => setTeamId(e.target.value)}
+                >
+                  <option value="">No team assigned</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="mb-5">
+              <label className="block mb-2 text-sm font-medium text-[#111827]">
                 Profile Image (Optional)
               </label>
               <div className="space-y-4">
@@ -239,7 +293,7 @@ export default function CreatePlayerPage() {
         {step === 2 && (
           <FormSection title="Review & Save" description="Review the player information and save">
             <div className="space-y-4">
-              <div className="p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
+                  <div className="p-4 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
                 <div className="flex items-center gap-4 mb-4">
                   {profileImagePreview ? (
                     <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#E5E7EB]">
@@ -261,6 +315,11 @@ export default function CreatePlayerPage() {
                       {firstName} {lastName}
                     </h3>
                     <p className="text-sm text-[#6B7280]">{position}</p>
+                    {teamId && (
+                      <p className="text-xs text-[#9CA3AF] mt-1">
+                        Team: {teams.find((t) => t.id === teamId)?.name || "Unknown"}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -268,6 +327,12 @@ export default function CreatePlayerPage() {
                     <span className="text-[#6B7280]">Date of Birth:</span>
                     <span className="ml-2 text-[#111827]">
                       {dateOfBirth ? new Date(dateOfBirth).toLocaleDateString() : "Not set"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B7280]">Team:</span>
+                    <span className="ml-2 text-[#111827]">
+                      {teamId ? teams.find((t) => t.id === teamId)?.name || "Unknown" : "Not assigned"}
                     </span>
                   </div>
                 </div>
