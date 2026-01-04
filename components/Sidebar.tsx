@@ -222,41 +222,31 @@ export default function Sidebar() {
         <div className={`px-4 pt-6 ${isCollapsed ? "px-3" : ""}`}>
           <div className={`border-t border-[#E5E7EB] pt-6 ${isCollapsed ? "flex justify-center" : ""}`}>
             {isCollapsed ? (
-              <div className="w-12 h-12 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] flex items-center justify-center overflow-hidden">
-                <img
-                  src={CLUB_LOGO_PATH}
-                  alt="Club Logo"
-                  className="w-full h-full object-contain p-2"
-                  onError={(e) => {
-                    // Fallback if logo doesn't exist - show initials
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    if (target.parentElement) {
-                      target.parentElement.innerHTML = '<span class="text-[#6B7280] text-xs font-semibold">CL</span>';
-                    }
-                  }}
-                />
-              </div>
+              <img
+                src={CLUB_LOGO_PATH}
+                alt="Club Logo"
+                className="w-12 h-auto object-contain"
+                onError={(e) => {
+                  // Fallback if logo doesn't exist
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             ) : (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">
                   Club
                 </p>
-                <div className="w-full aspect-square max-w-[140px] rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] flex items-center justify-center overflow-hidden p-3">
-                  <img
-                    src={CLUB_LOGO_PATH}
-                    alt="Club Logo"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      // Fallback if logo doesn't exist
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      if (target.parentElement) {
-                        target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><span class="text-[#6B7280] text-sm font-semibold">Club Logo</span></div>';
-                      }
-                    }}
-                  />
-                </div>
+                <img
+                  src={CLUB_LOGO_PATH}
+                  alt="Club Logo"
+                  className="w-24 h-auto object-contain"
+                  onError={(e) => {
+                    // Fallback if logo doesn't exist
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
               </div>
             )}
           </div>
