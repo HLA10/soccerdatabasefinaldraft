@@ -28,6 +28,11 @@ export default function CreatePlayerPage() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     fetch("/api/teams")
@@ -48,9 +53,105 @@ export default function CreatePlayerPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImagePreview(reader.result as string);
+        setShowImageEditor(true);
+        // Reset position and scale
+        setImageScale(1);
+        setImagePosition({ x: 0, y: 0 });
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!showImageEditor) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - imagePosition.x,
+      y: e.clientY - imagePosition.y,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !showImageEditor) return;
+    setImagePosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!showImageEditor) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setImageScale(Math.max(0.5, Math.min(3, imageScale + delta)));
+  };
+
+  const applyImageEdit = () => {
+    if (!profileImagePreview) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      const outputSize = 400; // Output size in pixels
+      const containerSize = 400; // Editor container size (matches preview size)
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      
+      if (ctx) {
+        // Calculate the displayed image size in the editor
+        const displayWidth = img.width * imageScale;
+        const displayHeight = img.height * imageScale;
+        
+        // Calculate the source crop area
+        // Position is relative to container center
+        const centerX = containerSize / 2;
+        const centerY = containerSize / 2;
+        
+        // Where the image center should be in container coordinates
+        const imageCenterX = centerX + imagePosition.x;
+        const imageCenterY = centerY + imagePosition.y;
+        
+        // Calculate source coordinates (map container position to image coordinates)
+        const sourceX = (imageCenterX - centerX) * (img.width / containerSize) + img.width / 2 - displayWidth / 2;
+        const sourceY = (imageCenterY - centerY) * (img.height / containerSize) + img.height / 2 - displayHeight / 2;
+        
+        // Ensure we don't go out of bounds
+        const clampedSourceX = Math.max(0, Math.min(img.width - displayWidth, sourceX));
+        const clampedSourceY = Math.max(0, Math.min(img.height - displayHeight, sourceY));
+        const clampedDisplayWidth = Math.min(displayWidth, img.width - clampedSourceX);
+        const clampedDisplayHeight = Math.min(displayHeight, img.height - clampedSourceY);
+        
+        ctx.drawImage(
+          img,
+          clampedSourceX, clampedSourceY, clampedDisplayWidth, clampedDisplayHeight,
+          0, 0, outputSize, outputSize
+        );
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], profileImage?.name || 'profile.jpg', { type: 'image/jpeg' });
+            setProfileImage(file);
+            setProfileImagePreview(canvas.toDataURL());
+            setShowImageEditor(false);
+            setImageScale(1);
+            setImagePosition({ x: 0, y: 0 });
+          }
+        }, 'image/jpeg', 0.9);
+      }
+    };
+    
+    img.src = profileImagePreview;
+  };
+
+  const resetImageEdit = () => {
+    setImageScale(1);
+    setImagePosition({ x: 0, y: 0 });
   };
 
   const uploadImage = async (): Promise<string | null> => {
@@ -260,7 +361,81 @@ export default function CreatePlayerPage() {
                   onChange={handleImageChange}
                   className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all duration-200 bg-white hover:border-[#D1D5DB]"
                 />
-                {profileImagePreview && (
+                
+                {showImageEditor && profileImagePreview && (
+                  <Card className="p-4 bg-[#F9FAFB]">
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-[#111827] mb-3">Adjust Image Position & Size</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-[#6B7280] mb-2">
+                            Zoom: {Math.round(imageScale * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min="50"
+                            max="300"
+                            value={imageScale * 100}
+                            onChange={(e) => setImageScale(parseInt(e.target.value) / 100)}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-[#9CA3AF] mt-1">
+                            <span>50%</span>
+                            <span>300%</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            onClick={resetImageEdit}
+                            className="text-xs py-1.5"
+                          >
+                            Reset Position
+                          </Button>
+                          <Button
+                            onClick={applyImageEdit}
+                            className="text-xs py-1.5"
+                          >
+                            Apply Changes
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative w-full max-w-md mx-auto aspect-square rounded-full overflow-hidden border-4 border-[#E5E7EB] bg-[#F3F4F6]">
+                      <div
+                        className="relative w-full h-full cursor-move"
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onWheel={handleWheel}
+                        style={{ touchAction: 'none' }}
+                      >
+                        <div
+                          className="absolute inset-0 flex items-center justify-center"
+                          style={{
+                            transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${imageScale})`,
+                            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                          }}
+                        >
+                          <img
+                            src={profileImagePreview}
+                            alt="Profile preview"
+                            className="max-w-none h-full w-auto select-none pointer-events-none"
+                            draggable={false}
+                            style={{ minWidth: '100%', minHeight: '100%' }}
+                          />
+                        </div>
+                        <div className="absolute inset-0 border-2 border-dashed border-[#1A73E8] pointer-events-none rounded-full"></div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#6B7280] text-center mt-3">
+                      Click and drag to reposition • Use scroll wheel or slider to zoom
+                    </p>
+                  </Card>
+                )}
+
+                {!showImageEditor && profileImagePreview && (
                   <div className="mt-4">
                     <p className="text-sm text-[#6B7280] mb-2">Preview:</p>
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#E5E7EB]">
@@ -270,6 +445,13 @@ export default function CreatePlayerPage() {
                         className="w-full h-full object-cover"
                       />
                     </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowImageEditor(true)}
+                      className="mt-2 text-xs"
+                    >
+                      Edit Image
+                    </Button>
                   </div>
                 )}
               </div>
