@@ -58,6 +58,10 @@ export default function Sidebar() {
               <span className={iconClass("/dashboard/create-team")}>➕</span>
               Create Team
             </Link>
+            <Link href="/dashboard/teams/create-seed" className={linkClass("/dashboard/teams/create-seed")}>
+              <span className={iconClass("/dashboard/teams/create-seed")}>🌱</span>
+              Seed Teams
+            </Link>
             <Link href="/dashboard/players/create" className={linkClass("/dashboard/players/create")}>
               <span className={iconClass("/dashboard/players/create")}>👤</span>
               Add Player

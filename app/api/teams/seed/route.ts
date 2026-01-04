@@ -1,8 +1,15 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const teamNames = ["F2011-A", "F2012-A", "F2013-A"];
     const createdTeams = [];
 
@@ -33,6 +40,7 @@ export async function POST() {
       teams: createdTeams,
     });
   } catch (error: any) {
+    console.error("Error seeding teams:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create teams" },
       { status: 500 }
