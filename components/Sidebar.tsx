@@ -35,23 +35,23 @@ export default function Sidebar() {
     if (isTeamPage || isTeamsListPage) {
       setShowTeamsSubmenu(true);
     }
-  }, [isTeamPage, isTeamsListPage]);
+  }, [pathname]);
 
   const linkClass = (path: string) =>
     pathname.startsWith(path)
-      ? "flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-md"
-      : "flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-all duration-200 hover:text-blue-600";
+      ? "flex items-center gap-3 px-4 py-3 bg-[#1A73E8] text-white rounded-lg font-medium transition-all duration-200"
+      : "flex items-center gap-3 px-4 py-3 text-[#6B7280] hover:bg-[#F3F4F6] rounded-lg font-medium transition-all duration-200 hover:text-[#111827]";
 
   const iconClass = (path: string) =>
-    pathname.startsWith(path) ? "text-white" : "text-gray-400";
+    pathname.startsWith(path) ? "text-white" : "text-[#9CA3AF]";
 
   return (
-    <div className="w-72 bg-white border-r border-gray-200 p-6 h-screen sticky top-0 overflow-y-auto">
+    <div className="w-64 bg-white border-r border-[#E5E7EB] p-6 h-screen sticky top-0 overflow-y-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-          ⚽ Soccer DB
+        <h1 className="text-xl font-bold text-[#111827] mb-1">
+          Soccer Hub
         </h1>
-        <p className="text-xs text-gray-500 mt-1">Management Platform</p>
+        <p className="text-xs text-[#6B7280]">Management Platform</p>
       </div>
 
       <nav className="space-y-1">
@@ -61,7 +61,7 @@ export default function Sidebar() {
         </Link>
 
         <div className="pt-6 pb-2">
-          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+          <p className="text-xs font-semibold text-[#9CA3AF] uppercase px-4 mb-3 tracking-wider">
             View & Browse
           </p>
           <div className="space-y-1">
@@ -71,12 +71,12 @@ export default function Sidebar() {
                 onClick={() => setShowTeamsSubmenu(!showTeamsSubmenu)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                   isTeamsListPage || isTeamPage
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-blue-600"
+                    ? "bg-[#1A73E8] text-white"
+                    : "text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className={isTeamsListPage || isTeamPage ? "text-white" : "text-gray-400"}>
+                  <span className={isTeamsListPage || isTeamPage ? "text-white" : "text-[#9CA3AF]"} style={{ fontSize: '18px' }}>
                     👥
                   </span>
                   <span>Teams</span>
@@ -93,15 +93,15 @@ export default function Sidebar() {
                     href="/dashboard/teams"
                     className={`block px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
                       isTeamsListPage
-                        ? "bg-blue-100 text-blue-700 font-semibold"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                        ? "bg-[#EBF4FF] text-[#1A73E8] font-medium"
+                        : "text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]"
                     }`}
                   >
                     All Teams
                   </Link>
                   {teams.length > 0 && (
                     <>
-                      <div className="h-px bg-gray-200 my-1"></div>
+                      <div className="h-px bg-[#E5E7EB] my-1"></div>
                       {teams.map((team) => {
                         const isActive = pathname === `/dashboard/teams/${team.id}`;
                         return (
@@ -110,8 +110,8 @@ export default function Sidebar() {
                             href={`/dashboard/teams/${team.id}`}
                             className={`block px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
                               isActive
-                                ? "bg-blue-100 text-blue-700 font-semibold"
-                                : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                                ? "bg-[#EBF4FF] text-[#1A73E8] font-medium"
+                                : "text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111827]"
                             }`}
                           >
                             {team.name}
@@ -124,13 +124,13 @@ export default function Sidebar() {
               )}
               
               {showTeamsSubmenu && !loadingTeams && teams.length === 0 && (
-                <div className="ml-4 mt-1 pl-4 text-xs text-gray-500">
+                <div className="ml-4 mt-1 pl-4 text-xs text-[#9CA3AF]">
                   No teams yet
                 </div>
               )}
               
               {showTeamsSubmenu && loadingTeams && (
-                <div className="ml-4 mt-1 pl-4 text-xs text-gray-500">
+                <div className="ml-4 mt-1 pl-4 text-xs text-[#9CA3AF]">
                   Loading...
                 </div>
               )}
@@ -148,7 +148,7 @@ export default function Sidebar() {
         </div>
 
         <div className="pt-4 pb-2">
-          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+          <p className="text-xs font-semibold text-[#9CA3AF] uppercase px-4 mb-3 tracking-wider">
             Create & Add
           </p>
           <div className="space-y-1">
@@ -176,7 +176,7 @@ export default function Sidebar() {
         </div>
 
         <div className="pt-4 pb-2">
-          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider">
+          <p className="text-xs font-semibold text-[#9CA3AF] uppercase px-4 mb-3 tracking-wider">
             Management
           </p>
           <div className="space-y-1">
