@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -11,6 +11,64 @@ import FormSection from "@/components/ui/FormSection";
 interface Team {
   id: string;
   name: string;
+}
+
+// Image Editor Preview Component
+function ImageEditorPreview({ 
+  src, 
+  position, 
+  scale, 
+  isDragging 
+}: { 
+  src: string; 
+  position: { x: number; y: number }; 
+  scale: number; 
+  isDragging: boolean;
+}) {
+  const [imgDimensions, setImgDimensions] = useState({ width: 400, height: 400 });
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const aspect = img.width / img.height;
+      if (aspect >= 1) {
+        // Landscape or square
+        setImgDimensions({ width: 400 * aspect, height: 400 });
+      } else {
+        // Portrait
+        setImgDimensions({ width: 400, height: 400 / aspect });
+      }
+    };
+    img.src = src;
+  }, [src]);
+
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: '50%',
+        top: '50%',
+        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+        transformOrigin: 'center center',
+        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+      }}
+    >
+      <img
+        ref={imgRef}
+        src={src}
+        alt="Profile preview"
+        className="select-none pointer-events-none"
+        draggable={false}
+        style={{ 
+          display: 'block',
+          width: `${imgDimensions.width}px`,
+          height: `${imgDimensions.height}px`,
+          objectFit: 'contain',
+        }}
+      />
+    </div>
+  );
 }
 
 export default function CreatePlayerPage() {
@@ -64,7 +122,9 @@ export default function CreatePlayerPage() {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!showImageEditor) return;
+    e.preventDefault();
     setIsDragging(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragStart({
       x: e.clientX - imagePosition.x,
       y: e.clientY - imagePosition.y,
@@ -73,6 +133,7 @@ export default function CreatePlayerPage() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !showImageEditor) return;
+    e.preventDefault();
     setImagePosition({
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y,
@@ -86,67 +147,105 @@ export default function CreatePlayerPage() {
   const handleWheel = (e: React.WheelEvent) => {
     if (!showImageEditor) return;
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setImageScale(Math.max(0.5, Math.min(3, imageScale + delta)));
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setImageScale(prev => Math.max(0.5, Math.min(3, prev + delta)));
   };
 
-  const applyImageEdit = () => {
+  const applyImageEdit = async () => {
     if (!profileImagePreview) return;
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
     
-    img.onload = () => {
-      const outputSize = 400; // Output size in pixels
-      const containerSize = 400; // Editor container size (matches preview size)
-      canvas.width = outputSize;
-      canvas.height = outputSize;
-      
-      if (ctx) {
-        // Calculate the displayed image size in the editor
-        const displayWidth = img.width * imageScale;
-        const displayHeight = img.height * imageScale;
+    return new Promise<void>((resolve) => {
+      img.onload = () => {
+        const outputSize = 400; // Output size in pixels
+        const editorSize = 400; // Editor container size
+        canvas.width = outputSize;
+        canvas.height = outputSize;
         
-        // Calculate the source crop area
-        // Position is relative to container center
-        const centerX = containerSize / 2;
-        const centerY = containerSize / 2;
-        
-        // Where the image center should be in container coordinates
-        const imageCenterX = centerX + imagePosition.x;
-        const imageCenterY = centerY + imagePosition.y;
-        
-        // Calculate source coordinates (map container position to image coordinates)
-        const sourceX = (imageCenterX - centerX) * (img.width / containerSize) + img.width / 2 - displayWidth / 2;
-        const sourceY = (imageCenterY - centerY) * (img.height / containerSize) + img.height / 2 - displayHeight / 2;
-        
-        // Ensure we don't go out of bounds
-        const clampedSourceX = Math.max(0, Math.min(img.width - displayWidth, sourceX));
-        const clampedSourceY = Math.max(0, Math.min(img.height - displayHeight, sourceY));
-        const clampedDisplayWidth = Math.min(displayWidth, img.width - clampedSourceX);
-        const clampedDisplayHeight = Math.min(displayHeight, img.height - clampedSourceY);
-        
-        ctx.drawImage(
-          img,
-          clampedSourceX, clampedSourceY, clampedDisplayWidth, clampedDisplayHeight,
-          0, 0, outputSize, outputSize
-        );
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], profileImage?.name || 'profile.jpg', { type: 'image/jpeg' });
-            setProfileImage(file);
-            setProfileImagePreview(canvas.toDataURL());
-            setShowImageEditor(false);
-            setImageScale(1);
-            setImagePosition({ x: 0, y: 0 });
+        if (ctx) {
+          // Calculate aspect ratio of the original image
+          const imgAspect = img.width / img.height;
+          
+          // Calculate how big the image appears in the editor (maintaining aspect ratio)
+          let displayWidth, displayHeight;
+          if (imgAspect >= 1) {
+            // Landscape or square: fit to width
+            displayWidth = editorSize * imageScale;
+            displayHeight = displayWidth / imgAspect;
+          } else {
+            // Portrait: fit to height
+            displayHeight = editorSize * imageScale;
+            displayWidth = displayHeight * imgAspect;
           }
-        }, 'image/jpeg', 0.9);
-      }
-    };
-    
-    img.src = profileImagePreview;
+          
+          // The editor center
+          const editorCenter = editorSize / 2;
+          
+          // Calculate where the image center is in editor coordinates after user positioning
+          const imageCenterX = editorCenter + imagePosition.x;
+          const imageCenterY = editorCenter + imagePosition.y;
+          
+          // Map editor coordinates to source image coordinates
+          // The ratio between editor size and displayed image size
+          const scaleRatio = img.width / displayWidth;
+          
+          // Calculate the center point in source image coordinates
+          const sourceCenterX = (imageCenterX - editorCenter) * scaleRatio + img.width / 2;
+          const sourceCenterY = (imageCenterY - editorCenter) * scaleRatio + img.height / 2;
+          
+          // For square crop, we need to determine crop size
+          // Use the smaller dimension to ensure we get a square
+          const cropSize = Math.min(img.width, img.height, displayWidth * scaleRatio, displayHeight * scaleRatio);
+          
+          // Calculate source crop coordinates (center-based)
+          let sourceX = sourceCenterX - cropSize / 2;
+          let sourceY = sourceCenterY - cropSize / 2;
+          
+          // Clamp to image bounds
+          sourceX = Math.max(0, Math.min(img.width - cropSize, sourceX));
+          sourceY = Math.max(0, Math.min(img.height - cropSize, sourceY));
+          
+          // Final crop size (may be smaller if clamped)
+          const finalCropSize = Math.min(cropSize, img.width - sourceX, img.height - sourceY);
+          
+          // Draw the cropped image to canvas
+          ctx.drawImage(
+            img,
+            sourceX, sourceY, finalCropSize, finalCropSize,
+            0, 0, outputSize, outputSize
+          );
+          
+          // Convert to blob and update state
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const file = new File([blob], profileImage?.name || 'profile.jpg', { type: 'image/jpeg' });
+              const newPreviewUrl = canvas.toDataURL('image/jpeg', 0.95);
+              
+              // Update state
+              setProfileImage(file);
+              setProfileImagePreview(newPreviewUrl);
+              setShowImageEditor(false);
+              
+              // Reset editor state
+              setImageScale(1);
+              setImagePosition({ x: 0, y: 0 });
+              
+              resolve();
+            }
+          }, 'image/jpeg', 0.95);
+        }
+      };
+      
+      img.onerror = () => {
+        console.error('Failed to load image for editing');
+        resolve();
+      };
+      
+      img.src = profileImagePreview;
+    });
   };
 
   const resetImageEdit = () => {
@@ -387,46 +486,54 @@ export default function CreatePlayerPage() {
                         <div className="flex gap-2">
                           <Button
                             variant="secondary"
-                            onClick={resetImageEdit}
+                            onClick={() => {
+                              resetImageEdit();
+                            }}
                             className="text-xs py-1.5"
                           >
-                            Reset Position
+                            Reset
                           </Button>
                           <Button
-                            onClick={applyImageEdit}
+                            onClick={() => {
+                              applyImageEdit();
+                            }}
                             className="text-xs py-1.5"
                           >
-                            Apply Changes
+                            Apply & Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => {
+                              setShowImageEditor(false);
+                            }}
+                            className="text-xs py-1.5"
+                          >
+                            Cancel
                           </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="relative w-full max-w-md mx-auto aspect-square rounded-full overflow-hidden border-4 border-[#E5E7EB] bg-[#F3F4F6]">
-                      <div
-                        className="relative w-full h-full cursor-move"
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                        onWheel={handleWheel}
-                        style={{ touchAction: 'none' }}
-                      >
+                    <div className="flex justify-center">
+                      <div className="relative rounded-full overflow-hidden border-4 border-[#E5E7EB] bg-[#F3F4F6]" style={{ width: '400px', height: '400px' }}>
                         <div
-                          className="absolute inset-0 flex items-center justify-center"
-                          style={{
-                            transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${imageScale})`,
-                            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                          }}
+                          className="relative w-full h-full cursor-move"
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                          onWheel={handleWheel}
+                          style={{ touchAction: 'none' }}
                         >
-                          <img
-                            src={profileImagePreview}
-                            alt="Profile preview"
-                            className="max-w-none h-full w-auto select-none pointer-events-none"
-                            draggable={false}
-                            style={{ minWidth: '100%', minHeight: '100%' }}
-                          />
+                          {profileImagePreview && (
+                            <ImageEditorPreview
+                              src={profileImagePreview}
+                              position={imagePosition}
+                              scale={imageScale}
+                              isDragging={isDragging}
+                            />
+                          )}
+                          <div className="absolute inset-0 border-2 border-dashed border-[#1A73E8] pointer-events-none rounded-full"></div>
                         </div>
-                        <div className="absolute inset-0 border-2 border-dashed border-[#1A73E8] pointer-events-none rounded-full"></div>
                       </div>
                     </div>
                     <p className="text-xs text-[#6B7280] text-center mt-3">
