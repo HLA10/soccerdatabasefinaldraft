@@ -127,6 +127,7 @@ export default function Sidebar() {
         </SidebarSection>
 
         <SidebarSection title="Team">
+          <NavItem href="/dashboard/games/create" label="Create Game" />
           <NavItem href="/dashboard/matches" label="Matches" />
           <NavItem href="/dashboard/training" label="Training" />
         </SidebarSection>

@@ -39,63 +39,180 @@ enum TalkCategory {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String?  @unique
-  email     String   @unique
-  name      String?
-  role      Role     @default(SCOUT)
-  teams     Team[]   @relation("TeamMembers")
-  sentInvites Invite[] @relation("InviteSender")
-  receivedInvites Invite[] @relation("InviteReceiver")
+  id               String            @id @default(cuid())
+  clerkId          String?           @unique
+  email            String            @unique
+  name             String?
+  role             Role              @default(SCOUT)
+  teams            Team[]            @relation("TeamMembers")
+  sentInvites      Invite[]          @relation("InviteSender")
+  receivedInvites  Invite[]          @relation("InviteReceiver")
   developmentTalks DevelopmentTalk[] @relation("TalkCoach")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@map("users")
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  members     User[]   @relation("TeamMembers")
+  id          String       @id @default(cuid())
+  name        String       @unique
+  members     User[]       @relation("TeamMembers")
   players     Player[]
-  matches     Match[]
+  matches     Match[]      @relation("TeamMatches")
+  homeMatches Match[]      @relation("HomeMatches")
+  awayMatches Match[]      @relation("AwayMatches")
   invites     Invite[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  matchEvents MatchEvent[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@map("teams")
 }
 
 model Player {
-  id            String        @id @default(cuid())
-  firstName     String
-  lastName      String
-  dateOfBirth   DateTime?
-  position      Position
-  profileImageUrl String?
-  injuryStatus  InjuryStatus? @default(FIT)
-  teamId        String?
-  team          Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  stats         MatchStats[]
+  id               String            @id @default(cuid())
+  firstName        String
+  lastName         String
+  dateOfBirth      DateTime?
+  position         Position
+  profileImageUrl  String?
+  injuryStatus     InjuryStatus?     @default(FIT)
+  teamId           String?
+  team             Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  stats            MatchStats[]
   developmentTalks DevelopmentTalk[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  squad            GameSquad[]
+  lineupPositions  LineupPosition[]
+  matchEvents      MatchEvent[]
+  relatedEvents    MatchEvent[]      @relation("RelatedPlayerEvents")
+  playerMinutes    PlayerMinutes[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@map("players")
 }
 
+enum FormationType {
+  ELEVEN_V_ELEVEN
+  NINE_V_NINE
+  SEVEN_V_SEVEN
+}
+
+enum SquadStatus {
+  CALLED
+  STARTING
+  BENCH
+}
+
+enum MatchEventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  SUB_ON
+  SUB_OFF
+}
+
 model Match {
+  id              String           @id @default(cuid())
+  date            DateTime
+  time            DateTime?
+  venue           String?
+  opponent        String
+  teamId          String
+  team            Team             @relation("TeamMatches", fields: [teamId], references: [id], onDelete: Cascade)
+  homeTeamId      String?
+  homeTeam        Team?            @relation("HomeMatches", fields: [homeTeamId], references: [id], onDelete: SetNull)
+  awayTeamId      String?
+  awayTeam        Team?            @relation("AwayMatches", fields: [awayTeamId], references: [id], onDelete: SetNull)
+  scoreHome       Int              @default(0)
+  scoreAway       Int              @default(0)
+  formationType   FormationType?   @default(ELEVEN_V_ELEVEN)
+  stats           MatchStats[]
+  squad           GameSquad[]
+  formations      Formation[]
+  lineupPositions LineupPosition[]
+  events          MatchEvent[]
+  playerMinutes   PlayerMinutes[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("matches")
+}
+
+model GameSquad {
   id        String      @id @default(cuid())
-  date      DateTime
-  opponent  String
-  teamId    String
-  team      Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  stats     MatchStats[]
+  gameId    String
+  game      Match       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  status    SquadStatus @default(CALLED)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  @@map("matches")
+  @@unique([gameId, playerId])
+  @@map("game_squads")
+}
+
+model Formation {
+  id            String        @id @default(cuid())
+  gameId        String
+  game          Match         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  formationName String // e.g. "4-3-3", "4-4-2"
+  formationType FormationType @default(ELEVEN_V_ELEVEN)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("formations")
+}
+
+model LineupPosition {
+  id           String   @id @default(cuid())
+  gameId       String
+  game         Match    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  positionCode String // e.g. "GK", "RB", "LB", "CB", "CM", "LW", "RW", "ST"
+  x            Float?
+  y            Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([gameId, playerId])
+  @@map("lineup_positions")
+}
+
+model MatchEvent {
+  id              String         @id @default(cuid())
+  gameId          String
+  game            Match          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  minute          Int
+  type            MatchEventType
+  playerId        String
+  player          Player         @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  relatedPlayerId String? // For assist or sub on/off
+  relatedPlayer   Player?        @relation("RelatedPlayerEvents", fields: [relatedPlayerId], references: [id], onDelete: SetNull)
+  teamId          String?
+  team            Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("match_events")
+}
+
+model PlayerMinutes {
+  id        String   @id @default(cuid())
+  gameId    String
+  game      Match    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  minuteOn  Int // Minute when player came on (0 for starters)
+  minuteOff Int? // Minute when player went off (null if still on)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("player_minutes")
 }
 
 model MatchStats {
@@ -132,19 +249,19 @@ model Invite {
 }
 
 model DevelopmentTalk {
-  id          String       @id @default(cuid())
-  playerId    String
-  player      Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  coachId     String
-  coach       User         @relation("TalkCoach", fields: [coachId], references: [id], onDelete: Cascade)
-  category    TalkCategory
-  notes       String
-  goals       String?
+  id           String       @id @default(cuid())
+  playerId     String
+  player       Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  coachId      String
+  coach        User         @relation("TalkCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  category     TalkCategory
+  notes        String
+  goals        String?
   actionPoints String?
-  attachments String[]     @default([])
+  attachments  String[]     @default([])
   followUpDate DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@map("development_talks")
 }
