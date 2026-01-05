@@ -38,34 +38,46 @@ enum TalkCategory {
   BEHAVIOR
 }
 
+enum TrainingPartCategory {
+  WARM_UP
+  TECHNICAL
+  TACTICAL
+  PHYSICAL
+  COOL_DOWN
+  GAME
+  OTHER
+}
+
 model User {
-  id               String            @id @default(cuid())
-  clerkId          String?           @unique
-  email            String            @unique
-  name             String?
-  role             Role              @default(SCOUT)
-  teams            Team[]            @relation("TeamMembers")
-  sentInvites      Invite[]          @relation("InviteSender")
-  receivedInvites  Invite[]          @relation("InviteReceiver")
-  developmentTalks DevelopmentTalk[] @relation("TalkCoach")
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                     String                    @id @default(cuid())
+  clerkId                String?                   @unique
+  email                  String                    @unique
+  name                   String?
+  role                   Role                      @default(SCOUT)
+  teams                  Team[]                    @relation("TeamMembers")
+  sentInvites            Invite[]                  @relation("InviteSender")
+  receivedInvites        Invite[]                  @relation("InviteReceiver")
+  developmentTalks       DevelopmentTalk[]         @relation("TalkCoach")
+  trainingTemplates      TrainingSessionTemplate[] @relation("TemplateCreator")
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
 
   @@map("users")
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  members     User[]       @relation("TeamMembers")
-  players     Player[]
-  matches     Match[]      @relation("TeamMatches")
-  homeMatches Match[]      @relation("HomeMatches")
-  awayMatches Match[]      @relation("AwayMatches")
-  invites     Invite[]
-  matchEvents MatchEvent[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String             @id @default(cuid())
+  name             String             @unique
+  members          User[]             @relation("TeamMembers")
+  players          Player[]
+  matches          Match[]            @relation("TeamMatches")
+  homeMatches      Match[]            @relation("HomeMatches")
+  awayMatches      Match[]            @relation("AwayMatches")
+  invites          Invite[]
+  matchEvents      MatchEvent[]
+  trainingSessions TrainingSession[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   @@map("teams")
 }
@@ -264,4 +276,62 @@ model DevelopmentTalk {
   updatedAt    DateTime     @updatedAt
 
   @@map("development_talks")
+}
+
+model TrainingSessionTemplate {
+  id        String                        @id @default(cuid())
+  name      String
+  createdBy String
+  creator   User                          @relation("TemplateCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  parts     TrainingSessionTemplatePart[]
+  createdAt DateTime                      @default(now())
+  updatedAt DateTime                      @updatedAt
+
+  @@map("training_session_templates")
+}
+
+model TrainingSessionTemplatePart {
+  id          String                  @id @default(cuid())
+  templateId  String
+  template    TrainingSessionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name        String
+  category    TrainingPartCategory
+  duration    Int // in minutes
+  notes       String?
+  orderIndex  Int
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  @@map("training_session_template_parts")
+}
+
+model TrainingSession {
+  id        String                 @id @default(cuid())
+  teamId    String
+  team      Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name      String
+  date      DateTime
+  time      DateTime?
+  location  String?
+  templateId String?
+  parts     TrainingSessionPart[]
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@map("training_sessions")
+}
+
+model TrainingSessionPart {
+  id          String           @id @default(cuid())
+  sessionId   String
+  session     TrainingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name        String
+  category    TrainingPartCategory
+  duration    Int // in minutes
+  notes       String?
+  orderIndex  Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("training_session_parts")
 }
