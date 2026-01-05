@@ -441,7 +441,7 @@ export default function DashboardHome() {
                   <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Games</p>
                 </Link>
                 <Link
-                  href="/dashboard/training"
+                  href="/dashboard/training/create"
                   className="p-3 rounded-lg border border-[#E5E7EB] hover:border-[#1A73E8] hover:bg-[#F9FAFB] transition-all text-center group"
                 >
                   <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Training</p>
