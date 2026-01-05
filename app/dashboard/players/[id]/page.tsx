@@ -205,7 +205,7 @@ export default function PlayerProfilePage() {
         <Card className="text-center py-12">
           <p className="text-[#6B7280] mb-4">Player not found</p>
           <Button onClick={() => router.push("/dashboard/players")}>
-            Back to Players
+            Back to Team
           </Button>
         </Card>
       </div>
@@ -257,7 +257,7 @@ export default function PlayerProfilePage() {
         title="Player Profile"
         action={
           <Button variant="secondary" onClick={() => router.push("/dashboard/players")}>
-            Back to Players
+            Back to Team
           </Button>
         }
       />

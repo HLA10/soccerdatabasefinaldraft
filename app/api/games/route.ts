@@ -6,9 +6,21 @@ export async function GET() {
   try {
     const games = await prisma.match.findMany({
       include: {
-        homeTeam: true,
-        awayTeam: true,
-        team: true,
+        homeTeam: {
+          include: {
+            club: true,
+          },
+        },
+        awayTeam: {
+          include: {
+            club: true,
+          },
+        },
+        team: {
+          include: {
+            club: true,
+          },
+        },
         squad: {
           include: {
             player: true,
@@ -59,7 +71,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { homeTeamId, awayTeamId, date, time, venue, formationType } = await req.json();
+    const {
+      homeTeamId,
+      awayTeamId,
+      date,
+      time,
+      venue,
+      venueName,
+      formationType,
+      matchType,
+      opponentName,
+      opponentLogoUrl,
+    } = await req.json();
 
     if (!homeTeamId || !awayTeamId || !date) {
       return NextResponse.json(
@@ -75,32 +98,44 @@ export async function POST(req: Request) {
       matchDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     }
 
+    // Get away team for opponent name/logo if not provided
+    const awayTeam = await prisma.team.findUnique({
+      where: { id: awayTeamId },
+      include: {
+        club: true,
+      },
+    });
+
     const game = await prisma.match.create({
       data: {
         date: matchDateTime,
         time: time ? matchDateTime : null,
         venue: venue || null,
+        venueName: venueName || null,
         homeTeamId,
         awayTeamId,
         teamId: homeTeamId, // Keep for backward compatibility
-        opponent: "", // Will be set from awayTeam name
+        opponent: opponentName || awayTeam?.name || "", // Set opponent name
+        opponentName: opponentName || awayTeam?.name || null,
+        opponentLogoUrl: opponentLogoUrl || awayTeam?.club?.logoUrl || awayTeam?.logoUrl || null,
+        matchType: matchType || "FRIENDLY",
         formationType: formationType || "ELEVEN_V_ELEVEN",
         scoreHome: 0,
         scoreAway: 0,
       },
       include: {
-        homeTeam: true,
-        awayTeam: true,
+        homeTeam: {
+          include: {
+            club: true,
+          },
+        },
+        awayTeam: {
+          include: {
+            club: true,
+          },
+        },
       },
     });
-
-    // Update opponent field with away team name for backward compatibility
-    if (game.awayTeam) {
-      await prisma.match.update({
-        where: { id: game.id },
-        data: { opponent: game.awayTeam.name },
-      });
-    }
 
     return NextResponse.json(game);
   } catch (error: any) {

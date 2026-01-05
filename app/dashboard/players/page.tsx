@@ -72,8 +72,8 @@ export default function PlayersPage() {
     return (
       <div className="max-w-7xl">
         <PageHeader
-          title="Players"
-          description="View and manage all players across teams"
+          title="Team"
+          description="View and manage all players and coaches across teams"
         />
         <Card className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent mx-auto mb-4"></div>
@@ -139,8 +139,8 @@ export default function PlayersPage() {
   return (
     <div className="max-w-7xl">
       <PageHeader
-        title="Players"
-        description="View and manage all players across teams"
+        title="Team"
+        description="View and manage all players and coaches across teams"
         action={
           <Link href="/dashboard/players/create">
             <Button>Add Player</Button>

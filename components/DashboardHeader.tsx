@@ -46,12 +46,12 @@ export default function DashboardHeader() {
 
         {/* Right: Quick Actions & User Profile */}
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/matches/create">
+          <Link href="/dashboard/calendar?type=match">
             <Button variant="secondary" className="text-sm px-4 py-2">
               Create Game
             </Button>
           </Link>
-          <Link href="/dashboard/calendar">
+          <Link href="/dashboard/calendar?open=true">
             <Button className="text-sm px-4 py-2">
               Create Event
             </Button>

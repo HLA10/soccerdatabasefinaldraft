@@ -65,19 +65,34 @@ model User {
   @@map("users")
 }
 
+model Club {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  logoUrl   String?
+  teams     Team[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clubs")
+}
+
 model Team {
-  id               String             @id @default(cuid())
-  name             String             @unique
-  members          User[]             @relation("TeamMembers")
-  players          Player[]
-  matches          Match[]            @relation("TeamMatches")
-  homeMatches      Match[]            @relation("HomeMatches")
-  awayMatches      Match[]            @relation("AwayMatches")
-  invites          Invite[]
-  matchEvents      MatchEvent[]
-  trainingSessions TrainingSession[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                      String                     @id @default(cuid())
+  name                    String                     @unique
+  logoUrl                 String?
+  clubId                  String?
+  club                    Club?                      @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  members                 User[]                     @relation("TeamMembers")
+  players                 Player[]
+  matches                 Match[]                    @relation("TeamMatches")
+  homeMatches             Match[]                    @relation("HomeMatches")
+  awayMatches             Match[]                    @relation("AwayMatches")
+  invites                 Invite[]
+  matchEvents             MatchEvent[]
+  trainingSessions        TrainingSession[]
+  recurringTrainingSchedules RecurringTrainingSchedule[] @relation("RecurringSchedules")
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
 
   @@map("teams")
 }
@@ -111,6 +126,13 @@ enum FormationType {
   SEVEN_V_SEVEN
 }
 
+enum MatchType {
+  FRIENDLY
+  LEAGUE
+  CUP
+  TOURNAMENT
+}
+
 enum SquadStatus {
   CALLED
   STARTING
@@ -131,7 +153,11 @@ model Match {
   date            DateTime
   time            DateTime?
   venue           String?
+  venueName       String?
   opponent        String
+  opponentName    String?
+  opponentLogoUrl String?
+  matchType       MatchType?       @default(FRIENDLY)
   teamId          String
   team            Team             @relation("TeamMatches", fields: [teamId], references: [id], onDelete: Cascade)
   homeTeamId      String?
@@ -279,13 +305,16 @@ model DevelopmentTalk {
 }
 
 model TrainingSessionTemplate {
-  id        String                        @id @default(cuid())
-  name      String
-  createdBy String
-  creator   User                          @relation("TemplateCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  parts     TrainingSessionTemplatePart[]
-  createdAt DateTime                      @default(now())
-  updatedAt DateTime                      @updatedAt
+  id          String                        @id @default(cuid())
+  name        String
+  createdBy   String
+  creator     User                          @relation("TemplateCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  daysOfWeek  Int[]                         @default([]) // Array of day numbers (0=Sunday, 1=Monday, etc.)
+  playerIds   String[]                      @default([]) // Array of player IDs for suggested players
+  parts       TrainingSessionTemplatePart[]
+  recurringSchedules RecurringTrainingSchedule[]
+  createdAt   DateTime                      @default(now())
+  updatedAt   DateTime                      @updatedAt
 
   @@map("training_session_templates")
 }
@@ -306,19 +335,40 @@ model TrainingSessionTemplatePart {
 }
 
 model TrainingSession {
-  id        String                 @id @default(cuid())
-  teamId    String
-  team      Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  name      String
-  date      DateTime
-  time      DateTime?
-  location  String?
-  templateId String?
-  parts     TrainingSessionPart[]
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
+  id              String                 @id @default(cuid())
+  teamId          String
+  team            Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name            String
+  date            DateTime
+  time            DateTime?
+  location        String?
+  templateId      String?
+  recurringScheduleId String?
+  recurringSchedule RecurringTrainingSchedule? @relation(fields: [recurringScheduleId], references: [id], onDelete: SetNull)
+  parts           TrainingSessionPart[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@map("training_sessions")
+}
+
+model RecurringTrainingSchedule {
+  id        String             @id @default(cuid())
+  teamId    String
+  team      Team               @relation("RecurringSchedules", fields: [teamId], references: [id], onDelete: Cascade)
+  name      String
+  daysOfWeek Int[]             // Array of day numbers (0=Sunday, 1=Monday, etc.)
+  startDate DateTime
+  endDate   DateTime?
+  time      String?            // Time in HH:mm format
+  location  String?
+  templateId String?
+  template  TrainingSessionTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sessions  TrainingSession[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("recurring_training_schedules")
 }
 
 model TrainingSessionPart {
