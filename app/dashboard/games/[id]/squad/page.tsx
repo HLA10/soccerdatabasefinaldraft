@@ -21,11 +21,14 @@ interface Player {
 
 interface Game {
   id: string;
-  homeTeam: { id: string; name: string };
-  awayTeam: { id: string; name: string };
+  homeTeam?: { id: string; name: string } | null;
+  awayTeam?: { id: string; name: string } | null;
+  team?: { id: string; name: string } | null;
+  opponent?: string;
+  opponentName?: string | null;
   date: string;
-  formationType: string;
-  squad: Array<{
+  formationType?: string | null;
+  squad?: Array<{
     player: Player;
     status: string;
   }>;
@@ -42,35 +45,72 @@ export default function SquadSelectionPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (params.id) {
-      fetch(`/api/games/${params.id}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setGame(data);
-          // Load existing squad selections
-          if (data.squad) {
-            setSelectedPlayers(new Set(data.squad.map((s: any) => s.player.id)));
-          }
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-
-      // Load all players from the home team
-      fetch("/api/players")
-        .then((res) => res.json())
-        .then((data) => {
-          // Filter players from the home team
-          fetch(`/api/games/${params.id}`)
-            .then((res) => res.json())
-            .then((gameData) => {
-              const homeTeamPlayers = data.filter(
-                (p: Player) => p.team?.id === gameData.homeTeam?.id
-              );
-              setPlayers(homeTeamPlayers);
-            });
-        })
-        .catch(() => {});
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    
+    if (!gameId) {
+      setError("Invalid game ID");
+      setLoading(false);
+      return;
     }
+
+    const fetchGameAndPlayers = async () => {
+      try {
+        // Fetch game data
+        const gameRes = await fetch(`/api/games/${gameId}`);
+        if (!gameRes.ok) {
+          if (gameRes.status === 404) {
+            throw new Error("Game not found");
+          }
+          throw new Error("Failed to fetch game");
+        }
+
+        const gameData = await gameRes.json();
+        setGame(gameData);
+
+        // Load existing squad selections
+        if (gameData.squad && Array.isArray(gameData.squad)) {
+          const squadPlayerIds = gameData.squad
+            .map((s: any) => {
+              // Handle both nested player object and direct playerId
+              return s?.player?.id || s?.playerId;
+            })
+            .filter((id: any): id is string => Boolean(id));
+          setSelectedPlayers(new Set(squadPlayerIds));
+        }
+
+        // Load all players from the home team (or team for legacy games)
+        const teamId = gameData.homeTeam?.id || gameData.team?.id;
+        if (teamId) {
+          try {
+            const playersRes = await fetch("/api/players");
+            if (!playersRes.ok) {
+              throw new Error("Failed to fetch players");
+            }
+            const playersData = await playersRes.json();
+            const homeTeamPlayers = (playersData || []).filter(
+              (p: Player) => p?.team?.id === teamId
+            );
+            setPlayers(homeTeamPlayers);
+          } catch (playersErr: any) {
+            console.error("Error loading players:", playersErr);
+            setPlayers([]);
+            setError(playersErr.message || "Failed to load players");
+          }
+        } else {
+          setPlayers([]);
+          setError("No team found for this game");
+        }
+
+        setLoading(false);
+      } catch (err: any) {
+        console.error("Error loading game:", err);
+        setError(err.message || "Failed to load game. Please try again.");
+        setLoading(false);
+        setGame(null);
+      }
+    };
+
+    fetchGameAndPlayers();
   }, [params.id]);
 
   const togglePlayer = (playerId: string) => {
@@ -84,11 +124,18 @@ export default function SquadSelectionPage() {
   };
 
   const handleSave = async () => {
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    
+    if (!gameId) {
+      setError("Invalid game ID");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
     try {
-      const res = await fetch(`/api/games/${params.id}/squad`, {
+      const res = await fetch(`/api/games/${gameId}/squad`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +150,7 @@ export default function SquadSelectionPage() {
         throw new Error(data.error || "Failed to save squad");
       }
 
-      router.push(`/dashboard/games/${params.id}/lineup`);
+      router.push(`/dashboard/games/${gameId}/lineup`);
     } catch (err: any) {
       setError(err.message);
       setSaving(false);
@@ -133,11 +180,14 @@ export default function SquadSelectionPage() {
     );
   }
 
+  const homeTeamName = game.homeTeam?.name || game.team?.name || "Home Team";
+  const awayTeamName = game.awayTeam?.name || game.opponentName || game.opponent || "Away Team";
+
   return (
     <div className="max-w-7xl">
       <PageHeader
         title="Call Players to Game"
-        description={`${game.homeTeam.name} vs ${game.awayTeam.name}`}
+        description={`${homeTeamName} vs ${awayTeamName}`}
       />
 
       <Card>

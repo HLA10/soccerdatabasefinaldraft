@@ -26,3 +26,4 @@ The sidebar is currently configured to look for: `/club-logo.png`
 - **Collapsed Sidebar:** Shows logo in a 48px square container
 - **Fallback:** If logo is not found, displays "Club Logo" text or "CL" initials
 
+

@@ -6,43 +6,13 @@ import { useEffect, useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import ClubLogo from "./ClubLogo";
 
-interface Team {
-  id: string;
-  name: string;
-}
-
 // Club Logo Configuration
 // Change this path to your club logo file
 const CLUB_LOGO_PATH = "/club-logo.png.jpg"; // Place your logo in the public folder
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [showTeamsSubmenu, setShowTeamsSubmenu] = useState(false);
-  const [loadingTeams, setLoadingTeams] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const isTeamPage = pathname.startsWith("/dashboard/teams/") && pathname !== "/dashboard/teams/create-seed";
-  const isTeamsListPage = pathname === "/dashboard/teams";
-
-  useEffect(() => {
-    fetch("/api/teams")
-      .then((res) => res.json())
-      .then((data) => {
-        setTeams(data || []);
-        setLoadingTeams(false);
-      })
-      .catch(() => {
-        setLoadingTeams(false);
-      });
-  }, []);
-
-  // Auto-expand submenu when on team pages
-  useEffect(() => {
-    if (isTeamPage || isTeamsListPage) {
-      setShowTeamsSubmenu(true);
-    }
-  }, [pathname]);
 
   const isActive = (path: string) => {
     if (path === "/dashboard") {
@@ -123,6 +93,7 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-6 space-y-8">
         <SidebarSection title="Main">
           <NavItem href="/dashboard" label="Dashboard" />
+          <NavItem href="/dashboard/players" label="Team" />
           <NavItem href="/dashboard/calendar" label="Calendar" />
         </SidebarSection>
 
@@ -131,16 +102,15 @@ export default function Sidebar() {
           <NavItem href="/dashboard/calendar?type=match" label="Create Game" />
           <NavItem href="/dashboard/matches" label="Matches" />
           <NavItem href="/dashboard/training" label="Training" />
+          <NavItem href="/dashboard/calendar?open=true&type=training" label="Create Training" />
         </SidebarSection>
 
         <SidebarSection title="Performance">
-          <NavItem href="/dashboard/players" label="Team" />
           <NavItem href="/dashboard/stats" label="Stats" />
           <NavItem href="/dashboard/analytics" label="Analytics" />
         </SidebarSection>
 
         <SidebarSection title="Admin">
-          <NavItem href="/dashboard/teams" label="Teams" />
           <NavItem href="/dashboard/invites" label="Invites" />
           <NavItem href="/dashboard/admin" label="Admin Panel" />
         </SidebarSection>

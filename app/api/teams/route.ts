@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name } = body;
+    const { name, logoUrl } = body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     const team = await prisma.team.create({
       data: {
         name: name.trim(),
+        logoUrl: logoUrl || null,
       },
       include: {
         members: true,

@@ -71,18 +71,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const {
-      homeTeamId,
-      awayTeamId,
-      date,
-      time,
-      venue,
-      venueName,
-      formationType,
-      matchType,
-      opponentName,
-      opponentLogoUrl,
-    } = await req.json();
+        const {
+          homeTeamId,
+          awayTeamId,
+          date,
+          time,
+          venue,
+          venueName,
+          formationType,
+          matchType,
+          opponentName,
+          opponentLogoUrl,
+          tournamentId,
+        } = await req.json();
 
     if (!homeTeamId || !awayTeamId || !date) {
       return NextResponse.json(
@@ -119,6 +120,7 @@ export async function POST(req: Request) {
         opponentName: opponentName || awayTeam?.name || null,
         opponentLogoUrl: opponentLogoUrl || awayTeam?.club?.logoUrl || awayTeam?.logoUrl || null,
         matchType: matchType || "FRIENDLY",
+        tournamentId: tournamentId || null,
         formationType: formationType || "ELEVEN_V_ELEVEN",
         scoreHome: 0,
         scoreAway: 0,

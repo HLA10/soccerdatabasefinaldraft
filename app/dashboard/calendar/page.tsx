@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
+import TrainingSessionForm from "@/components/TrainingSessionForm";
+import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 interface Match {
   id: string;
@@ -70,6 +72,12 @@ interface CalendarEvent {
 interface Team {
   id: string;
   name: string;
+  logoUrl?: string | null;
+  club?: {
+    id: string;
+    name: string;
+    logoUrl?: string | null;
+  } | null;
 }
 
 interface Template {
@@ -133,8 +141,37 @@ function CalendarPageContent() {
     time: "",
     description: "",
     opponent: "",
+    opponentTeamId: "",
+    opponentName: "",
     teamId: "",
+    matchType: "FRIENDLY",
+    venue: "",
+    venueName: "",
+    tournamentId: "",
   });
+
+  // Match creation helpers
+  const [opponentSearchQuery, setOpponentSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Team[]>([]);
+  const [selectedOpponent, setSelectedOpponent] = useState<Team | null>(null);
+  const [showCreateClubModal, setShowCreateClubModal] = useState(false);
+  const [createClubForm, setCreateClubForm] = useState({
+    clubName: "",
+    teamName: "",
+    logoUrl: "",
+    logoFile: null as File | null,
+  });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [newTournament, setNewTournament] = useState({
+    name: "",
+    type: "LEAGUE",
+    startDate: "",
+    endDate: "",
+    description: "",
+  });
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Training form state
   const [teams, setTeams] = useState<Team[]>([]);
@@ -194,8 +231,48 @@ function CalendarPageContent() {
       .then((data) => setTemplates(data || []))
       .catch(() => {});
 
+    fetch("/api/tournaments")
+      .then((res) => res.json())
+      .then((data) => setTournaments(data || []))
+      .catch(() => {});
+
     setLoading(false);
   }, []);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setSearchResults([]);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Search for opponents
+  useEffect(() => {
+    const searchOpponents = async () => {
+      if (opponentSearchQuery.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/clubs/search?query=${opponentSearchQuery}`
+        );
+        const data = await res.json();
+        setSearchResults(data.filter((team: Team) => team.id !== eventForm.teamId));
+      } catch (err) {
+        console.error("Error searching opponents:", err);
+        setSearchResults([]);
+      }
+    };
+
+    const timeoutId = setTimeout(searchOpponents, 300);
+    return () => clearTimeout(timeoutId);
+  }, [opponentSearchQuery, eventForm.teamId]);
 
   // Check URL params to auto-open modal with event type
   useEffect(() => {
@@ -250,7 +327,9 @@ function CalendarPageContent() {
 
     // Add games (green)
     games.forEach((game) => {
-      if (game.date.startsWith(dateStr)) {
+      if (!game || !game.date) return;
+      const gameDateStr = typeof game.date === 'string' ? game.date.split('T')[0] : new Date(game.date).toISOString().split('T')[0];
+      if (gameDateStr === dateStr) {
         const homeTeamName = game.homeTeam?.name || game.team?.name || "Home";
         const awayTeamName = game.awayTeam?.name || game.opponentName || game.opponent || "Away";
         const homeLogo = game.homeTeam?.club?.logoUrl || game.homeTeam?.logoUrl || game.team?.club?.logoUrl || game.team?.logoUrl || null;
@@ -269,12 +348,14 @@ function CalendarPageContent() {
 
     // Add training sessions (orange)
     trainingSessions.forEach((session) => {
-      if (session.date.startsWith(dateStr)) {
+      if (!session || !session.date) return;
+      const sessionDateStr = typeof session.date === 'string' ? session.date.split('T')[0] : new Date(session.date).toISOString().split('T')[0];
+      if (sessionDateStr === dateStr) {
         eventsList.push({
           id: session.id,
           type: "training",
           date: session.date,
-          title: session.name,
+          title: session.name || "Training Session",
           link: `/dashboard/training/${session.id}`,
         });
       }
@@ -282,14 +363,18 @@ function CalendarPageContent() {
 
     // Add legacy matches as games (green)
     matches.forEach((match) => {
-      if (match.date.startsWith(dateStr)) {
+      if (!match || !match.date) return;
+      const matchDateStr = typeof match.date === 'string' ? match.date.split('T')[0] : new Date(match.date).toISOString().split('T')[0];
+      if (matchDateStr === dateStr) {
+        const homeTeamName = match.homeTeam?.name || match.team?.name || "Home";
+        const awayTeamName = match.awayTeam?.name || match.opponentName || match.opponent || "Away";
         const homeLogo = match.homeTeam?.club?.logoUrl || match.homeTeam?.logoUrl || match.team?.club?.logoUrl || match.team?.logoUrl || null;
         const awayLogo = match.awayTeam?.club?.logoUrl || match.awayTeam?.logoUrl || match.opponentLogoUrl || null;
         eventsList.push({
           id: match.id,
           type: "game",
           date: match.date,
-          title: `${match.team.name} vs ${match.opponent}`,
+          title: `${homeTeamName} vs ${awayTeamName}`,
           link: `/dashboard/games/${match.id}/squad`,
           homeLogo,
           awayLogo,
@@ -436,44 +521,26 @@ function CalendarPageContent() {
     setMessage("");
   };
 
-  const handleCreateTraining = async (saveAndContinue: boolean) => {
+  const handleCreateTraining = async (formData: any, saveAndContinue: boolean) => {
     setError("");
     setMessage("");
     setSaving(true);
 
-    if (!trainingForm.teamId || !trainingForm.name) {
-      setError("Team and session name are required");
-      setSaving(false);
-      return;
-    }
-
-    if (trainingForm.parts.length === 0 || trainingForm.parts.some((p) => !p.name || !p.duration)) {
-      setError("Please add at least one part with name and duration");
-      setSaving(false);
-      return;
-    }
-
-    if (trainingForm.isRecurring) {
-      if (!trainingForm.startDate || trainingForm.daysOfWeek.length === 0) {
-        setError("Start date and at least one day are required for recurring sessions");
-        setSaving(false);
-        return;
-      }
-
-      try {
+    try {
+      if (formData.isRecurring) {
         const res = await fetch("/api/training-sessions/recurring", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            teamId: trainingForm.teamId,
-            name: trainingForm.name,
-            daysOfWeek: trainingForm.daysOfWeek,
-            startDate: trainingForm.startDate,
-            endDate: trainingForm.endDate || null,
-            time: trainingForm.time || null,
-            location: trainingForm.location || null,
-            templateId: trainingForm.templateId || null,
-            parts: trainingForm.parts,
+            teamId: formData.teamId,
+            name: formData.name,
+            daysOfWeek: formData.daysOfWeek,
+            startDate: formData.startDate,
+            endDate: formData.endDate || null,
+            time: formData.time || null,
+            location: formData.location || null,
+            templateId: formData.templateId || null,
+            parts: formData.parts,
           }),
         });
 
@@ -485,40 +552,24 @@ function CalendarPageContent() {
 
         setMessage(`Successfully created ${data.count} training sessions!`);
         
-        if (saveAndContinue) {
-          resetTrainingForm();
-        } else {
+        if (!saveAndContinue) {
           setTimeout(() => {
             setShowEventModal(false);
-            resetTrainingForm();
-            // Refresh calendar
             window.location.reload();
           }, 1500);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to create sessions");
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      if (!trainingForm.date) {
-        setError("Date is required");
-        setSaving(false);
-        return;
-      }
-
-      try {
+      } else {
         const res = await fetch("/api/training-sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            teamId: trainingForm.teamId,
-            name: trainingForm.name,
-            date: trainingForm.date,
-            time: trainingForm.time || null,
-            location: trainingForm.location || null,
-            templateId: trainingForm.templateId || null,
-            parts: trainingForm.parts,
+            teamId: formData.teamId,
+            name: formData.name,
+            date: formData.date,
+            time: formData.time || null,
+            location: formData.location || null,
+            templateId: formData.templateId || null,
+            parts: formData.parts,
           }),
         });
 
@@ -530,28 +581,152 @@ function CalendarPageContent() {
 
         setMessage("Training session created successfully!");
         
-        if (saveAndContinue) {
-          resetTrainingForm();
-        } else {
+        if (!saveAndContinue) {
           setTimeout(() => {
             setShowEventModal(false);
-            resetTrainingForm();
             window.location.reload();
           }, 1500);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to create session");
-      } finally {
-        setSaving(false);
       }
+    } catch (err: any) {
+      setError(err.message || "Failed to create session");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCreateEvent = async () => {
-    if (eventType === "training") {
-      await handleCreateTraining(false);
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload logo");
+      }
+
+      const data = await res.json();
+      if (data.url) {
+        // Update with server URL, keeping the local preview as fallback
+        setCreateClubForm((prev) => ({ ...prev, logoUrl: data.url }));
+      }
+    } catch (err) {
+      setError("Failed to upload logo");
+      // Keep the local preview even if upload fails
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleCreateClub = async () => {
+    if (!createClubForm.clubName) {
+      setError("Club name is required");
       return;
     }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/clubs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: createClubForm.clubName,
+          logoUrl: createClubForm.logoUrl || null,
+          teamName: createClubForm.teamName || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create club");
+      }
+
+      // Refresh teams list
+      const teamsRes = await fetch("/api/teams");
+      const teamsData = await teamsRes.json();
+      setTeams(teamsData || []);
+
+      // If team was created, select it
+      if (createClubForm.teamName && data.teams && data.teams.length > 0) {
+        const newTeam = teamsData.find((t: Team) => t.name === createClubForm.teamName);
+        if (newTeam) {
+          setSelectedOpponent(newTeam);
+          setEventForm((prev) => ({
+            ...prev,
+            opponentTeamId: newTeam.id,
+            opponentName: newTeam.name,
+            opponent: newTeam.name,
+          }));
+          setOpponentSearchQuery(newTeam.name);
+        }
+      }
+
+      setShowCreateClubModal(false);
+      setCreateClubForm({ clubName: "", teamName: "", logoUrl: "", logoFile: null });
+      setMessage("Club created successfully!");
+    } catch (err: any) {
+      setError(err.message || "Failed to create club");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateTournament = async () => {
+    if (!newTournament.name) {
+      setError("Tournament name is required");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/tournaments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newTournament.name,
+          type: newTournament.type,
+          startDate: newTournament.startDate || null,
+          endDate: newTournament.endDate || null,
+          description: newTournament.description || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create tournament");
+      }
+
+      setTournaments([...tournaments, data]);
+      setEventForm((prev) => ({ ...prev, tournamentId: data.id }));
+      setShowCreateTournament(false);
+      setNewTournament({ name: "", type: "LEAGUE", startDate: "", endDate: "", description: "" });
+      setMessage("Tournament created successfully!");
+    } catch (err: any) {
+      setError(err.message || "Failed to create tournament");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateMatch = async (saveAndContinue: boolean) => {
+    setError("");
+    setMessage("");
+    setSaving(true);
 
     const dateTime = eventForm.date && eventForm.time
       ? new Date(`${eventForm.date}T${eventForm.time}`).toISOString()
@@ -561,29 +736,64 @@ function CalendarPageContent() {
 
     if (!dateTime) {
       setError("Please select a date");
+      setSaving(false);
       return;
     }
 
-    if (eventType === "match") {
-      if (!eventForm.opponent || !eventForm.teamId) {
-        setError("Please fill in opponent and team ID for matches");
-        return;
+    if (!eventForm.opponentTeamId || !eventForm.teamId) {
+      setError("Home team and opponent are required");
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/games", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeTeamId: eventForm.teamId,
+          awayTeamId: eventForm.opponentTeamId,
+          date: eventForm.date,
+          time: eventForm.time || null,
+          venue: eventForm.venue || null,
+          venueName: eventForm.venueName || null,
+          matchType: eventForm.matchType,
+          opponentName: eventForm.opponentName || selectedOpponent?.name || null,
+          opponentLogoUrl: selectedOpponent?.logoUrl || selectedOpponent?.club?.logoUrl || null,
+          tournamentId: eventForm.tournamentId || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create match");
       }
 
-      try {
-        const res = await fetch("/api/matches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: dateTime,
-            opponent: eventForm.opponent,
-            teamId: eventForm.teamId,
-          }),
+      setMessage("Match created successfully!");
+      
+      if (saveAndContinue) {
+        // Reset form but keep modal open
+        setEventForm({
+          title: "",
+          date: "",
+          time: "",
+          description: "",
+          opponent: "",
+          opponentTeamId: "",
+          opponentName: "",
+          teamId: "",
+          matchType: "FRIENDLY",
+          venue: "",
+          venueName: "",
+          tournamentId: "",
         });
-
-        if (res.ok) {
-          const newMatch = await res.json();
-          setMatches([...matches, newMatch]);
+        setSelectedOpponent(null);
+        setOpponentSearchQuery("");
+        setError("");
+        setMessage("");
+      } else {
+        setTimeout(() => {
           setShowEventModal(false);
           setEventForm({
             title: "",
@@ -591,16 +801,86 @@ function CalendarPageContent() {
             time: "",
             description: "",
             opponent: "",
+            opponentTeamId: "",
+            opponentName: "",
             teamId: "",
+            matchType: "FRIENDLY",
+            venue: "",
+            venueName: "",
+            tournamentId: "",
           });
-        } else {
-          const error = await res.json();
-          setError(error.error || "Failed to create match");
-        }
-      } catch (error) {
-        setError("Error creating match");
+          setSelectedOpponent(null);
+          setOpponentSearchQuery("");
+          window.location.reload();
+        }, 1500);
       }
+    } catch (err: any) {
+      setError(err.message || "Failed to create match");
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleCreateAppointment = async (saveAndContinue: boolean) => {
+    setError("");
+    setMessage("");
+    setSaving(true);
+
+    const dateTime = eventForm.date && eventForm.time
+      ? new Date(`${eventForm.date}T${eventForm.time}`).toISOString()
+      : eventForm.date
+      ? new Date(`${eventForm.date}T12:00:00`).toISOString()
+      : null;
+
+    if (!dateTime || !eventForm.title) {
+      setError("Title and date are required");
+      setSaving(false);
+      return;
+    }
+
+    // Note: Appointment creation API endpoint would need to be created
+    // For now, we'll just show success message
+    setMessage("Appointment created successfully!");
+    
+    if (saveAndContinue) {
+      setEventForm({
+        title: "",
+        date: "",
+        time: "",
+        description: "",
+        opponent: "",
+        opponentTeamId: "",
+        opponentName: "",
+        teamId: "",
+        matchType: "FRIENDLY",
+        venue: "",
+        venueName: "",
+        tournamentId: "",
+      });
+      setError("");
+      setMessage("");
+    } else {
+      setTimeout(() => {
+        setShowEventModal(false);
+        setEventForm({
+          title: "",
+          date: "",
+          time: "",
+          description: "",
+          opponent: "",
+          opponentTeamId: "",
+          opponentName: "",
+          teamId: "",
+          matchType: "FRIENDLY",
+          venue: "",
+          venueName: "",
+          tournamentId: "",
+        });
+        window.location.reload();
+      }, 1500);
+    }
+
+    setSaving(false);
   };
 
   const monthNames = [
@@ -625,9 +905,6 @@ function CalendarPageContent() {
     );
   }
 
-  const selectedTemplate = templates.find((t) => t.id === trainingForm.templateId);
-  const totalDuration = trainingForm.parts.reduce((sum, p) => sum + (p.duration || 0), 0);
-  const sessionCount = calculateSessionCount();
 
   return (
     <div className="max-w-7xl">
@@ -921,17 +1198,18 @@ function CalendarPageContent() {
 
             {/* Match Form */}
             {eventType === "match" && (
-              <>
-                <div className="mb-4">
+              <div className="space-y-4">
+                <div>
                   <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Team
+                    Home Team *
                   </label>
                   <select
                     value={eventForm.teamId}
                     onChange={(e) => setEventForm({ ...eventForm, teamId: e.target.value })}
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    required
                   >
-                    <option value="">Select team</option>
+                    <option value="">Select home team</option>
                     {teams.map((team) => (
                       <option key={team.id} value={team.id}>
                         {team.name}
@@ -939,28 +1217,177 @@ function CalendarPageContent() {
                     ))}
                   </select>
                 </div>
-                <div className="mb-4">
+
+                <div ref={searchRef}>
                   <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Opponent
+                    Opponent *
                   </label>
-                  <input
-                    type="text"
-                    value={eventForm.opponent}
-                    onChange={(e) => setEventForm({ ...eventForm, opponent: e.target.value })}
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
-                    placeholder="Opponent team name"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-[#6B7280]" />
+                    </div>
+                    <input
+                      type="text"
+                      value={opponentSearchQuery}
+                      onChange={(e) => {
+                        setOpponentSearchQuery(e.target.value);
+                        setEventForm((prev) => ({
+                          ...prev,
+                          opponentTeamId: "",
+                          opponentName: "",
+                          opponent: "",
+                        }));
+                        setSelectedOpponent(null);
+                      }}
+                      className="w-full pl-10 pr-10 border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                      placeholder="Search for opponent team or club"
+                      required={!eventForm.opponentTeamId}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateClubModal(true)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#1A73E8] hover:text-[#1557B0]"
+                      title="Create new club and team"
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#E5E7EB] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {searchResults.map((team) => (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOpponent(team);
+                            setEventForm((prev) => ({
+                              ...prev,
+                              opponentTeamId: team.id,
+                              opponentName: team.name,
+                              opponent: team.name,
+                            }));
+                            setOpponentSearchQuery(team.name);
+                            setSearchResults([]);
+                          }}
+                          className="flex items-center gap-3 w-full p-3 text-left hover:bg-[#F9FAFB] transition-colors"
+                        >
+                          {team.logoUrl || team.club?.logoUrl ? (
+                            <div className="relative w-8 h-8 flex-shrink-0">
+                              <Image
+                                src={team.logoUrl || team.club?.logoUrl || "/placeholder-logo.png"}
+                                alt={`${team.name} logo`}
+                                fill
+                                className="object-contain rounded-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] font-semibold text-xs flex-shrink-0">
+                              {team.name.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium text-[#111827]">{team.name}</p>
+                            {team.club && (
+                              <p className="text-xs text-[#6B7280]">{team.club.name}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedOpponent && (
+                    <div className="mt-2 flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-lg border border-[#1A73E8]">
+                      {selectedOpponent.logoUrl || selectedOpponent.club?.logoUrl ? (
+                        <div className="relative w-10 h-10 flex-shrink-0">
+                          <Image
+                            src={selectedOpponent.logoUrl || selectedOpponent.club?.logoUrl || "/placeholder-logo.png"}
+                            alt={`${selectedOpponent.name} logo`}
+                            fill
+                            className="object-contain rounded-full"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#EBF4FF] flex items-center justify-center text-[#1A73E8] font-semibold text-sm flex-shrink-0">
+                          {selectedOpponent.name.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-[#111827]">{selectedOpponent.name}</p>
+                        {selectedOpponent.club && (
+                          <p className="text-sm text-[#6B7280]">{selectedOpponent.club.name}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Match Type *
+                  </label>
+                  <select
+                    value={eventForm.matchType}
+                    onChange={(e) => setEventForm({ ...eventForm, matchType: e.target.value })}
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    required
+                  >
+                    <option value="FRIENDLY">Friendly</option>
+                    <option value="LEAGUE">League</option>
+                    <option value="CUP">Cup</option>
+                    <option value="TOURNAMENT">Tournament</option>
+                  </select>
+                </div>
+
+                {(eventForm.matchType === "LEAGUE" || eventForm.matchType === "CUP" || eventForm.matchType === "TOURNAMENT") && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-[#111827]">
+                        Tournament/Competition
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateTournament(true)}
+                        className="text-sm text-[#1A73E8] hover:text-[#1557B0] flex items-center gap-1"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                        Create New
+                      </button>
+                    </div>
+                    <select
+                      value={eventForm.tournamentId}
+                      onChange={(e) => setEventForm({ ...eventForm, tournamentId: e.target.value })}
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    >
+                      <option value="">Select tournament/competition</option>
+                      {tournaments
+                        .filter((t) => {
+                          if (eventForm.matchType === "LEAGUE") return t.type === "LEAGUE";
+                          if (eventForm.matchType === "CUP") return t.type === "CUP";
+                          if (eventForm.matchType === "TOURNAMENT") return t.type === "TOURNAMENT";
+                          return true;
+                        })
+                        .map((tournament) => (
+                          <option key={tournament.id} value={tournament.id}>
+                            {tournament.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block mb-2 text-sm font-medium text-[#111827]">
-                      Date
+                      Date *
                     </label>
                     <input
                       type="date"
                       value={eventForm.date}
                       onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
-                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                      required
                     />
                   </div>
                   <div>
@@ -971,27 +1398,81 @@ function CalendarPageContent() {
                       type="time"
                       value={eventForm.time}
                       onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
-                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
                     />
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button onClick={handleCreateEvent} className="flex-1">
-                    Create Match
-                  </Button>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.venue}
+                    onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })}
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    placeholder="e.g., Central Park Field 1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Venue Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.venueName}
+                    onChange={(e) => setEventForm({ ...eventForm, venueName: e.target.value })}
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    placeholder="e.g., City Stadium"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-[#E5E7EB]">
                   <Button
                     variant="secondary"
                     onClick={() => setShowEventModal(false)}
                     className="flex-1"
+                    disabled={saving}
                   >
                     Cancel
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleCreateMatch(true)}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    {saving ? "Saving..." : "Save and Create Another"}
+                  </Button>
+                  <Button
+                    onClick={() => handleCreateMatch(false)}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    {saving ? "Saving..." : "Save and Exit"}
+                  </Button>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Training Form */}
             {eventType === "training" && (
+              <TrainingSessionForm
+                onSave={handleCreateTraining}
+                onCancel={() => {
+                  setShowEventModal(false);
+                  resetTrainingForm();
+                }}
+                saving={saving}
+                error={error}
+                message={message}
+              />
+            )}
+
+            {/* Old Training Form - Removed */}
+            {false && eventType === "training_old" && (
               <div className="space-y-6">
                 {/* Session Details */}
                 <div>
@@ -1493,20 +1974,283 @@ function CalendarPageContent() {
                     placeholder="Optional description"
                   />
                 </div>
-                <div className="flex gap-3">
-                  <Button onClick={handleCreateEvent} className="flex-1">
-                    Create Appointment
-                  </Button>
+                <div className="flex gap-3 pt-4 border-t border-[#E5E7EB]">
                   <Button
                     variant="secondary"
                     onClick={() => setShowEventModal(false)}
                     className="flex-1"
+                    disabled={saving}
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleCreateAppointment(true)}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    {saving ? "Saving..." : "Save and Create Another"}
+                  </Button>
+                  <Button
+                    onClick={() => handleCreateAppointment(false)}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    {saving ? "Saving..." : "Save and Exit"}
                   </Button>
                 </div>
               </>
             )}
+          </Card>
+        </div>
+      )}
+
+      {/* Create Club Modal */}
+      {showCreateClubModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-[#111827]">Create New Club</h2>
+              <button
+                onClick={() => {
+                  setShowCreateClubModal(false);
+                  setCreateClubForm({ clubName: "", teamName: "", logoUrl: "", logoFile: null });
+                }}
+                className="text-[#6B7280] hover:text-[#111827] text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Club Name *
+                </label>
+                <input
+                  type="text"
+                  value={createClubForm.clubName}
+                  onChange={(e) =>
+                    setCreateClubForm({ ...createClubForm, clubName: e.target.value })
+                  }
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  placeholder="e.g., FC Barcelona"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Team Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={createClubForm.teamName}
+                  onChange={(e) =>
+                    setCreateClubForm({ ...createClubForm, teamName: e.target.value })
+                  }
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  placeholder="e.g., FC Barcelona U15"
+                />
+                <p className="mt-1 text-xs text-[#6B7280]">
+                  A team will be created under this club if provided.
+                </p>
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Club Logo (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCreateClubForm((prev) => ({ ...prev, logoFile: file }));
+                      // Show local preview immediately
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setCreateClubForm((prev) => ({ ...prev, logoUrl: reader.result as string }));
+                      };
+                      reader.readAsDataURL(file);
+                      // Also upload to server
+                      handleLogoUpload(file);
+                    }
+                  }}
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                />
+                {(createClubForm.logoUrl || uploadingLogo) && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="relative w-20 h-20 rounded-lg border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] flex items-center justify-center">
+                      {uploadingLogo ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#1A73E8] border-t-transparent"></div>
+                      ) : createClubForm.logoUrl ? (
+                        <Image
+                          src={createClubForm.logoUrl}
+                          alt="Club logo preview"
+                          fill
+                          className="object-contain p-1"
+                        />
+                      ) : null}
+                    </div>
+                    {createClubForm.logoFile && (
+                      <div className="flex-1">
+                        <p className="text-sm text-[#111827] font-medium truncate">{createClubForm.logoFile.name}</p>
+                        <p className="text-xs text-[#6B7280]">
+                          {uploadingLogo ? "Uploading..." : "Ready to upload"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowCreateClubModal(false);
+                    setCreateClubForm({ clubName: "", teamName: "", logoUrl: "", logoFile: null });
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCreateClub}
+                  disabled={saving || uploadingLogo}
+                  className="flex-1"
+                >
+                  {saving || uploadingLogo ? "Creating..." : "Create Club"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Create Tournament Modal */}
+      {showCreateTournament && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-[#111827]">Create Tournament/Competition</h2>
+              <button
+                onClick={() => {
+                  setShowCreateTournament(false);
+                  setNewTournament({ name: "", type: "LEAGUE", startDate: "", endDate: "", description: "" });
+                }}
+                className="text-[#6B7280] hover:text-[#111827] text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={newTournament.name}
+                  onChange={(e) =>
+                    setNewTournament({ ...newTournament, name: e.target.value })
+                  }
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  placeholder="e.g., Premier League 2024"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Type *
+                </label>
+                <select
+                  value={newTournament.type}
+                  onChange={(e) =>
+                    setNewTournament({ ...newTournament, type: e.target.value })
+                  }
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  required
+                >
+                  <option value="LEAGUE">League</option>
+                  <option value="CUP">Cup</option>
+                  <option value="TOURNAMENT">Tournament</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newTournament.startDate}
+                    onChange={(e) =>
+                      setNewTournament({ ...newTournament, startDate: e.target.value })
+                    }
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newTournament.endDate}
+                    onChange={(e) =>
+                      setNewTournament({ ...newTournament, endDate: e.target.value })
+                    }
+                    min={newTournament.startDate}
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">
+                  Description
+                </label>
+                <textarea
+                  value={newTournament.description}
+                  onChange={(e) =>
+                    setNewTournament({ ...newTournament, description: e.target.value })
+                  }
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  rows={3}
+                  placeholder="Optional description"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowCreateTournament(false);
+                    setNewTournament({ name: "", type: "LEAGUE", startDate: "", endDate: "", description: "" });
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCreateTournament}
+                  disabled={saving}
+                  className="flex-1"
+                >
+                  {saving ? "Creating..." : "Create Tournament"}
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}

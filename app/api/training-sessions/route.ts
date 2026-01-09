@@ -12,6 +12,7 @@ export async function GET() {
             orderIndex: "asc",
           },
         },
+        recurringSchedule: true,
       },
       orderBy: {
         date: "desc",

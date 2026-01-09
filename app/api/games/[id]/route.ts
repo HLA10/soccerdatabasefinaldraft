@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -104,6 +105,54 @@ export async function PATCH(
     console.error("Error updating game:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update game" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Delete related records first (cascading should handle most, but being explicit)
+    await prisma.matchEvent.deleteMany({
+      where: { gameId: id },
+    });
+
+    await prisma.playerMinutes.deleteMany({
+      where: { gameId: id },
+    });
+
+    await prisma.lineupPosition.deleteMany({
+      where: { gameId: id },
+    });
+
+    await prisma.formation.deleteMany({
+      where: { gameId: id },
+    });
+
+    await prisma.gameSquad.deleteMany({
+      where: { gameId: id },
+    });
+
+    // Delete the match
+    await prisma.match.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "Game deleted successfully" });
+  } catch (error: any) {
+    console.error("Error deleting game:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to delete game" },
       { status: 500 }
     );
   }

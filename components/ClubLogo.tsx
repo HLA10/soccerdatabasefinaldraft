@@ -46,3 +46,4 @@ export default function ClubLogo({ isCollapsed = false }: ClubLogoProps) {
   );
 }
 
+

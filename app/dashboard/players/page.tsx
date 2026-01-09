@@ -22,19 +22,51 @@ interface Player {
   stats: any[];
 }
 
+interface Team {
+  id: string;
+  name: string;
+}
+
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [loadingTeams, setLoadingTeams] = useState(true);
 
   useEffect(() => {
+    // Fetch teams
+    fetch("/api/teams")
+      .then((res) => res.json())
+      .then((data) => {
+        setTeams(data || []);
+        setLoadingTeams(false);
+      })
+      .catch(() => setLoadingTeams(false));
+
+    // Fetch players
     fetch("/api/players")
       .then((res) => res.json())
       .then((data) => {
-        setPlayers(data);
+        setAllPlayers(data || []);
+        setPlayers(data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Filter players when team selection changes
+  useEffect(() => {
+    if (selectedTeamId === "") {
+      setPlayers(allPlayers);
+    } else {
+      const filtered = allPlayers.filter(
+        (player) => player.team?.id === selectedTeamId
+      );
+      setPlayers(filtered);
+    }
+  }, [selectedTeamId, allPlayers]);
 
   const getTotalGoals = (stats: any[]) => {
     return stats.reduce((sum, stat) => sum + (stat.goals || 0), 0);
@@ -68,7 +100,9 @@ export default function PlayersPage() {
     return colors[status || "FIT"] || colors.FIT;
   };
 
-  if (loading) {
+  const selectedTeam = teams.find((team) => team.id === selectedTeamId);
+
+  if (loading || loadingTeams) {
     return (
       <div className="max-w-7xl">
         <PageHeader
@@ -77,7 +111,7 @@ export default function PlayersPage() {
         />
         <Card className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-sm text-[#6B7280]">Loading players...</p>
+          <p className="text-sm text-[#6B7280]">Loading...</p>
         </Card>
       </div>
     );
@@ -138,22 +172,62 @@ export default function PlayersPage() {
 
   return (
     <div className="max-w-7xl">
-      <PageHeader
-        title="Team"
-        description="View and manage all players and coaches across teams"
-        action={
-          <Link href="/dashboard/players/create">
-            <Button>Add Player</Button>
-          </Link>
-        }
-      />
+      <div className="mb-6">
+        <PageHeader
+          title={selectedTeam ? selectedTeam.name : "Team"}
+          description={selectedTeam ? `View and manage players for ${selectedTeam.name}` : "View and manage all players and coaches across teams"}
+          action={
+            <Link href="/dashboard/players/create">
+              <Button>Add Player</Button>
+            </Link>
+          }
+        />
+        
+        {/* Team Dropdown */}
+        <div className="mt-4">
+          <label htmlFor="team-select" className="block text-sm font-medium text-[#374151] mb-2">
+            Select Team
+          </label>
+          <select
+            id="team-select"
+            value={selectedTeamId}
+            onChange={(e) => setSelectedTeamId(e.target.value)}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+              backgroundSize: '20px',
+              backgroundPosition: 'right 12px center',
+              backgroundRepeat: 'no-repeat',
+            }}
+            className="
+              w-full max-w-xs px-4 py-2.5 pr-10 text-sm border border-[#D1D5DB] rounded-lg
+              bg-white text-[#111827] font-medium
+              focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent
+              hover:border-[#9CA3AF] transition-colors
+              appearance-none cursor-pointer
+            "
+          >
+            <option value="">All Teams</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
           {players.length === 0 ? (
             <Card className="text-center py-12 px-6">
-              <h3 className="text-lg font-semibold mb-2 text-[#111827]">No players yet</h3>
-              <p className="text-sm text-[#6B7280] mb-6">Add your first player to get started!</p>
+              <h3 className="text-lg font-semibold mb-2 text-[#111827]">
+                {selectedTeam ? `No players in ${selectedTeam.name}` : "No players yet"}
+              </h3>
+              <p className="text-sm text-[#6B7280] mb-6">
+                {selectedTeam 
+                  ? `This team doesn't have any players assigned yet. Add players to get started!` 
+                  : "Add your first player to get started!"}
+              </p>
               <Link href="/dashboard/players/create">
-                <Button>Add Your First Player</Button>
+                <Button>{selectedTeam ? "Add Player to Team" : "Add Your First Player"}</Button>
               </Link>
             </Card>
           ) : (

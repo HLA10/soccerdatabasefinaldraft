@@ -48,3 +48,4 @@ Once you have the URL, simply:
 - **Admin Access:** To access Admin Panel, you need to manually change a user's role to "ADMIN" (you can do this through the database or create an admin user directly)
 - **Team Creation:** Only ADMIN or COACH roles can create teams
 
+

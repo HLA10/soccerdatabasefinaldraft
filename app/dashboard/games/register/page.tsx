@@ -150,9 +150,13 @@ export default function RegisterGamePage() {
       }
 
       const data = await res.json();
-      setCreateClubForm((prev) => ({ ...prev, logoUrl: data.url }));
+      if (data.url) {
+        // Update with server URL, keeping the local preview as fallback
+        setCreateClubForm((prev) => ({ ...prev, logoUrl: data.url }));
+      }
     } catch (err) {
       setError("Failed to upload logo");
+      // Keep the local preview even if upload fails
     } finally {
       setUploadingLogo(false);
     }
@@ -692,19 +696,40 @@ export default function RegisterGamePage() {
                     const file = e.target.files?.[0];
                     if (file) {
                       setCreateClubForm((prev) => ({ ...prev, logoFile: file }));
+                      // Show local preview immediately
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setCreateClubForm((prev) => ({ ...prev, logoUrl: reader.result as string }));
+                      };
+                      reader.readAsDataURL(file);
+                      // Also upload to server
                       handleLogoUpload(file);
                     }
                   }}
-                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
                 />
-                {createClubForm.logoUrl && (
-                  <div className="mt-3 relative w-20 h-20">
-                    <Image
-                      src={createClubForm.logoUrl}
-                      alt="Club logo"
-                      fill
-                      className="object-contain rounded-lg border border-[#E5E7EB]"
-                    />
+                {(createClubForm.logoUrl || uploadingLogo) && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="relative w-20 h-20 rounded-lg border border-[#E5E7EB] overflow-hidden bg-[#F9FAFB] flex items-center justify-center">
+                      {uploadingLogo ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#1A73E8] border-t-transparent"></div>
+                      ) : createClubForm.logoUrl ? (
+                        <Image
+                          src={createClubForm.logoUrl}
+                          alt="Club logo preview"
+                          fill
+                          className="object-contain p-1"
+                        />
+                      ) : null}
+                    </div>
+                    {createClubForm.logoFile && (
+                      <div className="flex-1">
+                        <p className="text-sm text-[#111827] font-medium truncate">{createClubForm.logoFile.name}</p>
+                        <p className="text-xs text-[#6B7280]">
+                          {uploadingLogo ? "Uploading..." : "Ready to upload"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

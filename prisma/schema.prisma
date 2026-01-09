@@ -133,6 +133,26 @@ enum MatchType {
   TOURNAMENT
 }
 
+enum TournamentType {
+  LEAGUE
+  CUP
+  TOURNAMENT
+}
+
+model Tournament {
+  id          String      @id @default(cuid())
+  name        String
+  type        TournamentType
+  startDate   DateTime?
+  endDate     DateTime?
+  description String?
+  matches     Match[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("tournaments")
+}
+
 enum SquadStatus {
   CALLED
   STARTING
@@ -158,6 +178,8 @@ model Match {
   opponentName    String?
   opponentLogoUrl String?
   matchType       MatchType?       @default(FRIENDLY)
+  tournamentId    String?
+  tournament      Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
   teamId          String
   team            Team             @relation("TeamMatches", fields: [teamId], references: [id], onDelete: Cascade)
   homeTeamId      String?
