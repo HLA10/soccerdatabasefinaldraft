@@ -38,3 +38,44 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { contractStatus, jerseyNumber } = body;
+
+    const updateData: any = {};
+    if (contractStatus !== undefined) updateData.contractStatus = contractStatus;
+    if (jerseyNumber !== undefined) updateData.jerseyNumber = jerseyNumber;
+
+    const player = await prisma.player.update({
+      where: { id },
+      data: updateData,
+      include: {
+        team: true,
+        stats: {
+          include: {
+            match: true,
+          },
+          orderBy: {
+            match: {
+              date: "desc",
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(player);
+  } catch (error: any) {
+    console.error("Error updating player:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update player" },
+      { status: 500 }
+    );
+  }
+}
+
