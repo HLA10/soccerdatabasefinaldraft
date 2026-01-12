@@ -125,9 +125,7 @@ export async function DELETE(
     // Delete related records first (cascading should handle most, but being explicit)
     await prisma.matchEvent.deleteMany({
       where: { gameId: id },
-    });
-
-    await prisma.playerMinutes.deleteMany({
+    });    await prisma.playerMinutes.deleteMany({
       where: { gameId: id },
     });
 

@@ -164,9 +164,7 @@ export async function GET(
       orderBy: {
         minute: "asc",
       },
-    });
-
-    return NextResponse.json(events);
+    });    return NextResponse.json(events);
   } catch (error: any) {
     console.error("Error fetching events:", error);
     return NextResponse.json(
