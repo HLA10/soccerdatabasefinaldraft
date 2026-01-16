@@ -213,9 +213,8 @@ export default function PlayersPage() {
             ))}
           </select>
         </div>
-      </div>
 
-          {players.length === 0 ? (
+      {players.length === 0 ? (
             <Card className="text-center py-12 px-6">
               <h3 className="text-lg font-semibold mb-2 text-[#111827]">
                 {selectedTeam ? `No players in ${selectedTeam.name}` : "No players yet"}

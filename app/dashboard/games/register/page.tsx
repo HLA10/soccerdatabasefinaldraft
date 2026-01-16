@@ -2,11 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import PageHeader from "@/components/ui/PageHeader";
 import Image from "next/image";
+import Link from "next/link";
 
 interface Team {
   id: string;
@@ -37,10 +35,12 @@ interface GameForm {
   opponentName: string;
   matchType: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   location: string;
   venueName: string;
   matchFormat: string;
+  isHomeMatch: boolean;
 }
 
 export default function RegisterGamePage() {
@@ -60,6 +60,8 @@ export default function RegisterGamePage() {
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<"info" | "invitation">("info");
+  const [activityType, setActivityType] = useState<"training" | "meeting" | "other" | "match">("match");
 
   const [form, setForm] = useState<GameForm>({
     homeTeamId: "",
@@ -67,10 +69,12 @@ export default function RegisterGamePage() {
     opponentName: "",
     matchType: "FRIENDLY",
     date: "",
-    time: "",
+    startTime: "",
+    endTime: "",
     location: "",
     venueName: "",
     matchFormat: "ELEVEN_V_ELEVEN",
+    isHomeMatch: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -151,12 +155,10 @@ export default function RegisterGamePage() {
 
       const data = await res.json();
       if (data.url) {
-        // Update with server URL, keeping the local preview as fallback
         setCreateClubForm((prev) => ({ ...prev, logoUrl: data.url }));
       }
     } catch (err) {
       setError("Failed to upload logo");
-      // Keep the local preview even if upload fails
     } finally {
       setUploadingLogo(false);
     }
@@ -190,9 +192,7 @@ export default function RegisterGamePage() {
         throw new Error(data.error || "Failed to create club");
       }
 
-      // If team was created, select it
       if (createClubForm.teamName) {
-        // Refresh teams list
         const teamsRes = await fetch("/api/teams");
         const teamsData = await teamsRes.json();
         setTeams(teamsData || []);
@@ -208,7 +208,6 @@ export default function RegisterGamePage() {
           });
         }
       } else {
-        // Just select the club
         handleOpponentSelect({
           id: data.id,
           name: data.name,
@@ -227,20 +226,13 @@ export default function RegisterGamePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (saveAndInvite: boolean = false) => {
     setError("");
     setMessage("");
     setLoading(true);
 
-    if (!form.homeTeamId || !form.opponentTeamId || !form.date) {
+    if (!form.homeTeamId || !form.opponentName || !form.date) {
       setError("Home team, opponent, and date are required");
-      setLoading(false);
-      return;
-    }
-
-    if (form.homeTeamId === form.opponentTeamId) {
-      setError("Home team and opponent must be different");
       setLoading(false);
       return;
     }
@@ -254,10 +246,10 @@ export default function RegisterGamePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          homeTeamId: form.homeTeamId,
-          awayTeamId: form.opponentTeamId,
+          homeTeamId: form.isHomeMatch ? form.homeTeamId : (form.opponentTeamId || form.homeTeamId),
+          awayTeamId: form.isHomeMatch ? (form.opponentTeamId || form.homeTeamId) : form.homeTeamId,
           date: form.date,
-          time: form.time || null,
+          time: form.startTime ? `${form.startTime}:00` : null,
           venue: form.location || null,
           venueName: form.venueName || null,
           formationType: form.matchFormat,
@@ -284,361 +276,365 @@ export default function RegisterGamePage() {
     }
   };
 
-  const updateForm = (field: keyof GameForm, value: string) => {
+  const updateForm = (field: keyof GameForm, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const matchTypeOptions = [
-    { value: "FRIENDLY", label: "Friendly" },
-    { value: "LEAGUE", label: "League" },
-    { value: "CUP", label: "Cup" },
-    { value: "TOURNAMENT", label: "Tournament" },
-  ];
-
-  const matchFormatOptions = [
-    { value: "ELEVEN_V_ELEVEN", label: "11v11" },
-    { value: "NINE_V_NINE", label: "9v9" },
-    { value: "SEVEN_V_SEVEN", label: "7v7" },
-  ];
-
-  const opponentLogoUrl = selectedOpponent?.logoUrl || selectedOpponent?.club?.logoUrl || null;
+  const homeTeamLogo = homeTeam?.logoUrl || homeTeam?.club?.logoUrl || null;
+  const opponentLogo = selectedOpponent?.logoUrl || selectedOpponent?.club?.logoUrl || null;
 
   return (
-    <div className="max-w-7xl">
-      <PageHeader
-        title="Register Game"
-        description="Register a new game with opponent details and match information"
-      />
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="sticky top-0 bg-white border-b border-[#E5E7EB] z-10">
+        <div className="flex items-center justify-between px-4 py-4">
+          <Link href="/dashboard/games" className="text-[#111827] hover:text-[#1A73E8] transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </Link>
+          <h1 className="text-lg font-semibold text-[#111827]">Register Game</h1>
+          <div className="w-6"></div>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Game Details */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-[#111827] mb-1">Game Details</h2>
-                <p className="text-sm text-[#6B7280]">Enter the essential match information</p>
+        {/* Tabs */}
+        <div className="flex border-b border-[#E5E7EB] px-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab("info")}
+            className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+              activeTab === "info"
+                ? "text-[#111827]"
+                : "text-[#6B7280] hover:text-[#111827]"
+            }`}
+          >
+            Activity Info
+            {activeTab === "info" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1A73E8]"></div>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("invitation")}
+            className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+              activeTab === "invitation"
+                ? "text-[#111827]"
+                : "text-[#6B7280] hover:text-[#111827]"
+            }`}
+          >
+            Invitation
+            {activeTab === "invitation" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1A73E8]"></div>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 py-6 space-y-6">
+        {activeTab === "info" && (
+          <>
+            {/* Activity Type Filters */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {(["training", "meeting", "other", "match"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setActivityType(type)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    activityType === type
+                      ? "bg-[#1A73E8] text-white"
+                      : "bg-[#F3F4F6] text-[#111827] hover:bg-[#E5E7EB]"
+                  }`}
+                >
+                  <span className="capitalize">
+                    {type === "training" ? "Training" : type === "meeting" ? "Meeting" : type === "other" ? "Other" : "Match"}
+                  </span>
+                  {activityType === type && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {activityType === type && type === "match" && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Match Type Selector */}
+            {activityType === "match" && (
+              <div className="flex bg-[#F9FAFB] rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => updateForm("isHomeMatch", true)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md text-sm font-medium transition-all ${
+                    form.isHomeMatch
+                      ? "bg-[#1A73E8] text-white"
+                      : "text-[#111827] hover:bg-white"
+                  }`}
+                >
+                  <span>Home Match</span>
+                  {form.isHomeMatch && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateForm("isHomeMatch", false)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-md text-sm font-medium transition-all ${
+                    !form.isHomeMatch
+                      ? "bg-[#1A73E8] text-white"
+                      : "text-[#111827] hover:bg-white"
+                  }`}
+                >
+                  <span>Away Match</span>
+                  {!form.isHomeMatch && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Activity Info Section */}
+            <div>
+              <h2 className="text-base font-semibold text-[#111827] mb-4">Activity Info</h2>
+
+              {/* Info Box */}
+              <div className="mb-6 p-4 bg-[#EBF4FF] rounded-lg border border-[#1A73E8]/20">
+                <p className="text-sm text-[#111827]">
+                  Want to import a series? Log in to sportadmin.se and go to Matches.
+                </p>
               </div>
 
-              <div className="space-y-5">
-                {/* Home Team */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Home Team *
-                  </label>
-                  <select
-                    value={form.homeTeamId}
+              {/* My Team */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-[#111827]">My Team</label>
+                <div className="relative w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm text-[#111827] flex-1">
+                    {homeTeam?.name || "Select team"}
+                  </span>
+                  {homeTeamLogo && (
+                    <div className="relative w-8 h-8 flex-shrink-0 ml-3">
+                      <Image
+                        src={homeTeamLogo}
+                        alt={homeTeam?.name || "Team logo"}
+                        fill
+                        className="object-contain rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Opponent */}
+              <div className="mb-4 relative" ref={searchRef}>
+                <label className="block mb-2 text-sm font-medium text-[#111827]">Opponent</label>
+                <div className="relative w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 flex items-center justify-between">
+                  <input
+                    type="text"
+                    value={searchQuery}
                     onChange={(e) => {
-                      updateForm("homeTeamId", e.target.value);
-                      const team = teams.find((t) => t.id === e.target.value);
-                      setHomeTeam(team || null);
+                      setSearchQuery(e.target.value);
+                      if (!e.target.value) {
+                        setSelectedOpponent(null);
+                        setForm((prev) => ({ ...prev, opponentTeamId: "", opponentName: "" }));
+                      }
                     }}
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                    required
-                  >
-                    <option value="">Select home team</option>
-                    {teams.map((team) => (
-                      <option key={team.id} value={team.id}>
-                        {team.name}
-                      </option>
+                    placeholder="Search opponent..."
+                    className="flex-1 text-sm text-[#111827] bg-transparent border-none outline-none placeholder-[#9CA3AF]"
+                  />
+                  {opponentLogo && (
+                    <div className="relative w-8 h-8 flex-shrink-0 ml-3">
+                      <Image
+                        src={opponentLogo}
+                        alt={selectedOpponent?.name || "Opponent logo"}
+                        fill
+                        className="object-contain rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Results */}
+                {showSearchResults && searchResults.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-[#E5E7EB] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        type="button"
+                        onClick={() => handleOpponentSelect(result)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F9FAFB] transition-colors text-left border-b border-[#E5E7EB] last:border-b-0"
+                      >
+                        {result.logoUrl || result.club?.logoUrl ? (
+                          <div className="relative w-8 h-8 flex-shrink-0">
+                            <Image
+                              src={result.logoUrl || result.club?.logoUrl || ""}
+                              alt={result.name}
+                              fill
+                              className="object-contain rounded"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 bg-[#E5E7EB] rounded flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-[#6B7280]">
+                              {result.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#111827] truncate">
+                            {result.name}
+                          </p>
+                          <p className="text-xs text-[#6B7280]">
+                            {result.type === "club" ? "Club" : "Team"}
+                          </p>
+                        </div>
+                      </button>
                     ))}
-                  </select>
-                </div>
-
-                {/* Match Type */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Match Type *
-                  </label>
-                  <select
-                    value={form.matchType}
-                    onChange={(e) => updateForm("matchType", e.target.value)}
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                    required
-                  >
-                    {matchTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Date and Time */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-[#111827]">
-                      Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => updateForm("date", e.target.value)}
-                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                      required
-                    />
                   </div>
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-[#111827]">
-                      Time
-                    </label>
-                    <input
-                      type="time"
-                      value={form.time}
-                      onChange={(e) => updateForm("time", e.target.value)}
-                      className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                    />
-                  </div>
-                </div>
+                )}
 
-                {/* Location */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Location *
-                  </label>
+                {/* No Results + Create Option */}
+                {showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-[#E5E7EB] rounded-lg shadow-lg p-4">
+                    <p className="text-sm text-[#6B7280] mb-3">No teams or clubs found</p>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateClub(true);
+                        setCreateClubForm((prev) => ({ ...prev, clubName: searchQuery }));
+                      }}
+                      className="w-full"
+                    >
+                      + Create Club & Team
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-[#111827]">Location</label>
+                <div className="relative w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 flex items-center justify-between">
                   <input
                     type="text"
                     value={form.location}
                     onChange={(e) => updateForm("location", e.target.value)}
-                    placeholder="e.g., Main Field, Training Ground"
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                    required
+                    placeholder="Enter location..."
+                    className="flex-1 text-sm text-[#111827] bg-transparent border-none outline-none placeholder-[#9CA3AF]"
                   />
+                  <svg className="w-5 h-5 text-[#6B7280] flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
+              </div>
 
-                {/* Venue Name */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Venue Name (Optional)
-                  </label>
+              {/* Display Name */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-[#111827]">Display Name</label>
+                <input
+                  type="text"
+                  value={form.venueName}
+                  onChange={(e) => updateForm("venueName", e.target.value)}
+                  placeholder="Enter display name..."
+                  className="w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent"
+                />
+              </div>
+
+              {/* Date */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-[#111827]">Date</label>
+                <div className="relative w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 flex items-center justify-between">
                   <input
-                    type="text"
-                    value={form.venueName}
-                    onChange={(e) => updateForm("venueName", e.target.value)}
-                    placeholder="e.g., Community Sports Center"
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => updateForm("date", e.target.value)}
+                    className="flex-1 text-sm text-[#111827] bg-transparent border-none outline-none"
+                  />
+                  <svg className="w-5 h-5 text-[#6B7280] flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Start and End Time */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">Start</label>
+                  <input
+                    type="time"
+                    value={form.startTime}
+                    onChange={(e) => updateForm("startTime", e.target.value)}
+                    className="w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent"
                   />
                 </div>
-
-                {/* Match Format */}
                 <div>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Match Format *
-                  </label>
-                  <select
-                    value={form.matchFormat}
-                    onChange={(e) => updateForm("matchFormat", e.target.value)}
-                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                    required
-                  >
-                    {matchFormatOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">End</label>
+                  <input
+                    type="time"
+                    value={form.endTime}
+                    onChange={(e) => updateForm("endTime", e.target.value)}
+                    className="w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent"
+                  />
                 </div>
               </div>
-            </Card>
+            </div>
+          </>
+        )}
+
+        {activeTab === "invitation" && (
+          <div className="py-8 text-center">
+            <p className="text-sm text-[#6B7280]">Invitation feature coming soon</p>
           </div>
-
-          {/* Right Column: Opponent Selection */}
-          <div className="lg:col-span-1">
-            <Card>
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-[#111827] mb-1">Opponent</h2>
-                <p className="text-sm text-[#6B7280]">Search and select the opposing team</p>
-              </div>
-
-              <div className="space-y-5">
-                {/* Opponent Search */}
-                <div className="relative" ref={searchRef}>
-                  <label className="block mb-2 text-sm font-medium text-[#111827]">
-                    Opponent Team *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (!e.target.value) {
-                          setSelectedOpponent(null);
-                          setForm((prev) => ({ ...prev, opponentTeamId: "", opponentName: "" }));
-                        }
-                      }}
-                      placeholder="Search by team or club name..."
-                      className="w-full border border-[#E5E7EB] rounded-lg pl-10 pr-4 py-3 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
-                      required
-                    />
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B7280]">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Search Results */}
-                  {showSearchResults && searchResults.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-[#E5E7EB] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {searchResults.map((result) => (
-                        <button
-                          key={result.id}
-                          type="button"
-                          onClick={() => handleOpponentSelect(result)}
-                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F9FAFB] transition-colors text-left border-b border-[#E5E7EB] last:border-b-0"
-                        >
-                          {result.logoUrl || result.club?.logoUrl ? (
-                            <div className="relative w-8 h-8 flex-shrink-0">
-                              <Image
-                                src={result.logoUrl || result.club?.logoUrl || ""}
-                                alt={result.name}
-                                fill
-                                className="object-contain rounded"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 bg-[#E5E7EB] rounded flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-bold text-[#6B7280]">
-                                {result.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#111827] truncate">
-                              {result.name}
-                            </p>
-                            <p className="text-xs text-[#6B7280]">
-                              {result.type === "club" ? "Club" : "Team"}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* No Results + Create Option */}
-                  {showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-[#E5E7EB] rounded-lg shadow-lg p-4">
-                      <p className="text-sm text-[#6B7280] mb-3">No teams or clubs found</p>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setShowCreateClub(true);
-                          setCreateClubForm((prev) => ({ ...prev, clubName: searchQuery }));
-                        }}
-                        className="w-full"
-                      >
-                        + Create Club & Team
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Opponent Logo Preview */}
-                {selectedOpponent && (
-                  <div className="pt-4 border-t border-[#E5E7EB]">
-                    <div className="flex flex-col items-center justify-center p-6 bg-[#F9FAFB] rounded-lg border border-[#E5E7EB]">
-                      {opponentLogoUrl ? (
-                        <div className="relative w-24 h-24 mb-4">
-                          <Image
-                            src={opponentLogoUrl}
-                            alt={selectedOpponent.name}
-                            fill
-                            className="object-contain rounded-lg"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-24 h-24 mb-4 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB] rounded-lg flex items-center justify-center">
-                          <span className="text-2xl font-bold text-[#6B7280]">
-                            {selectedOpponent.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <p className="text-sm font-semibold text-[#111827] text-center">
-                        {selectedOpponent.name}
-                      </p>
-                      {!opponentLogoUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCreateClub(true);
-                            setCreateClubForm((prev) => ({ ...prev, clubName: selectedOpponent.name }));
-                          }}
-                          className="mt-3 text-xs text-[#1A73E8] hover:text-[#1557B0] font-medium"
-                        >
-                          + Add Logo
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Home Team Info */}
-                {homeTeam && (
-                  <div className="pt-4 border-t border-[#E5E7EB]">
-                    <p className="text-xs font-medium text-[#6B7280] mb-2">Home Team</p>
-                    <div className="flex items-center gap-3 p-3 bg-[#EBF4FF] rounded-lg border border-[#1A73E8]/20">
-                      {homeTeam.logoUrl || homeTeam.club?.logoUrl ? (
-                        <div className="relative w-10 h-10">
-                          <Image
-                            src={homeTeam.logoUrl || homeTeam.club?.logoUrl || ""}
-                            alt={homeTeam.name}
-                            fill
-                            className="object-contain rounded"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 bg-[#1A73E8] rounded flex items-center justify-center">
-                          <span className="text-sm font-bold text-white">
-                            {homeTeam.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-[#111827]">
-                        {homeTeam.name}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        </div>
+        )}
 
         {/* Error and Success Messages */}
         {error && (
-          <div className="mt-6 p-4 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
+          <div className="p-4 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
             <p className="text-[#991B1B] font-medium text-sm">{error}</p>
           </div>
         )}
 
         {message && (
-          <div className="mt-6 p-4 bg-[#ECFDF5] border border-[#10B981] rounded-lg">
+          <div className="p-4 bg-[#ECFDF5] border border-[#10B981] rounded-lg">
             <p className="text-[#065F46] font-medium text-sm">{message}</p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="mt-6 flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => router.back()}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={loading || !form.opponentTeamId}>
-            {loading ? "Creating..." : "Create Game"}
-          </Button>
-        </div>
-      </form>
+        {activeTab === "info" && (
+          <div className="space-y-3 pb-6">
+            <Button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              disabled={loading}
+              className="w-full bg-[#1A73E8] text-white hover:bg-[#1557B0]"
+            >
+              Save & Invite
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              disabled={loading}
+              className="w-full bg-[#10B981] text-white hover:bg-[#059669]"
+            >
+              Save
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Create Club Modal */}
       {showCreateClub && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold text-[#111827]">Create Club</h3>
               <button
@@ -696,17 +692,15 @@ export default function RegisterGamePage() {
                     const file = e.target.files?.[0];
                     if (file) {
                       setCreateClubForm((prev) => ({ ...prev, logoFile: file }));
-                      // Show local preview immediately
                       const reader = new FileReader();
                       reader.onloadend = () => {
                         setCreateClubForm((prev) => ({ ...prev, logoUrl: reader.result as string }));
                       };
                       reader.readAsDataURL(file);
-                      // Also upload to server
                       handleLogoUpload(file);
                     }
                   }}
-                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                 />
                 {(createClubForm.logoUrl || uploadingLogo) && (
                   <div className="mt-3 flex items-center gap-3">
@@ -722,14 +716,6 @@ export default function RegisterGamePage() {
                         />
                       ) : null}
                     </div>
-                    {createClubForm.logoFile && (
-                      <div className="flex-1">
-                        <p className="text-sm text-[#111827] font-medium truncate">{createClubForm.logoFile.name}</p>
-                        <p className="text-xs text-[#6B7280]">
-                          {uploadingLogo ? "Uploading..." : "Ready to upload"}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -756,7 +742,7 @@ export default function RegisterGamePage() {
                 </Button>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
