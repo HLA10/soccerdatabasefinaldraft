@@ -1,37 +1,68 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #F9FAFB;
-  --foreground: #111827;
-  --primary: #1A73E8;
-  --primary-hover: #1557B0;
-  --secondary: #111827;
-  --accent: #10B981;
-  --success: #10B981;
-  --warning: #F59E0B;
-  --error: #EF4444;
-  --card: #FFFFFF;
-  --border: #E5E7EB;
-  --text-primary: #111827;
-  --text-secondary: #6B7280;
-  --text-tertiary: #9CA3AF;
+@layer base {
+  :root {
+    font-size: 14px;
+    /* Clean Pro - Stats Perform style */
+    --background: 210 40% 98%;           /* #f8fafc - Light slate */
+    --foreground: 215 25% 17%;           /* #1e293b - Charcoal */
+    --card: 0 0% 100%;                   /* White */
+    --card-foreground: 215 25% 17%;      /* Charcoal */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 17%;
+    --primary: 168 76% 42%;              /* #14b8a6 - Teal */
+    --primary-foreground: 0 0% 100%;     /* White */
+    --secondary: 210 40% 96%;            /* Light gray */
+    --secondary-foreground: 215 25% 17%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;     /* Slate gray */
+    --accent: 168 76% 42%;               /* Teal */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;            /* #dc2626 - Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 168 76% 42%;                 /* Teal */
+    /* Custom success/warning colors */
+    --success: 142 71% 45%;              /* #22c55e */
+    --warning: 25 95% 53%;               /* #f97316 */
+  }
+
+  .dark {
+    --background: 215 25% 9%;            /* Dark charcoal */
+    --foreground: 210 40% 98%;
+    --card: 215 25% 13%;
+    --card-foreground: 210 40% 98%;
+    --popover: 215 25% 13%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 168 76% 42%;              /* Teal */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 168 76% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 20%;
+    --input: 215 25% 20%;
+    --ring: 168 76% 42%;
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
 /* Smooth scrolling */
