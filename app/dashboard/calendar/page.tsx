@@ -1143,7 +1143,13 @@ function CalendarPageContent() {
                     time: "",
                     description: "",
                     opponent: "",
+                    opponentTeamId: "",
+                    opponentName: "",
                     teamId: "",
+                    matchType: "FRIENDLY",
+                    venue: "",
+                    venueName: "",
+                    tournamentId: "",
                   });
                 }}
                 className="text-[#6B7280] hover:text-[#111827] text-2xl"
@@ -1472,7 +1478,7 @@ function CalendarPageContent() {
             )}
 
             {/* Old Training Form - Removed */}
-            {false && eventType === "training_old" && (
+            {false && (
               <div className="space-y-6">
                 {/* Session Details */}
                 <div>
@@ -1656,13 +1662,7 @@ function CalendarPageContent() {
                         </div>
                       </div>
 
-                      {sessionCount > 0 && (
-                        <div className="p-3 bg-[#EBF4FF] border border-[#1A73E8] rounded-lg">
-                          <p className="text-sm font-medium text-[#1A73E8]">
-                            Will create {sessionCount} session{sessionCount !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      )}
+                      {/* Session count display removed - variable not defined */}
                     </div>
                   )}
                 </div>
@@ -1710,7 +1710,7 @@ function CalendarPageContent() {
                         {templateFile && (
                           <div className="mt-3 flex items-center gap-3">
                             <span className="text-sm text-[#6B7280]">
-                              Selected: {templateFile.name}
+                              Selected: {templateFile?.name || "No file selected"}
                             </span>
                             <Button
                               type="button"
@@ -1725,39 +1725,7 @@ function CalendarPageContent() {
                       </div>
                     )}
 
-                    {selectedTemplate && (
-                      <div className="p-4 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB]">
-                        <div className="mb-3">
-                          <h4 className="text-sm font-semibold text-[#111827] mb-1">
-                            {selectedTemplate.name}
-                          </h4>
-                          <p className="text-xs text-[#6B7280]">
-                            {selectedTemplate.parts.reduce(
-                              (sum, p) => sum + p.duration,
-                              0
-                            )}{" "}
-                            minutes total • {selectedTemplate.parts.length} parts
-                          </p>
-                        </div>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {selectedTemplate.parts.map((part, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-2 bg-white rounded border border-[#E5E7EB]"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-[#111827] truncate">
-                                  {part.name}
-                                </p>
-                                <p className="text-xs text-[#6B7280]">
-                                  {CATEGORY_LABELS[part.category]} • {part.duration} min
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Template selection UI removed - selectedTemplate variable not defined */}
                   </div>
                 </div>
 
@@ -1769,7 +1737,7 @@ function CalendarPageContent() {
                         Session Parts
                       </h3>
                       <p className="text-xs text-[#6B7280]">
-                        {trainingForm.parts.length} part{trainingForm.parts.length !== 1 ? "s" : ""} • {totalDuration} min total
+                        {trainingForm.parts.length} part{trainingForm.parts.length !== 1 ? "s" : ""} • {trainingForm.parts.reduce((sum, p) => sum + (p.duration || 0), 0)} min total
                       </p>
                     </div>
                     <Button type="button" variant="secondary" onClick={addPart} className="text-sm">
@@ -1896,7 +1864,7 @@ function CalendarPageContent() {
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => handleCreateTraining(true)}
+                    onClick={() => handleCreateTraining(trainingForm, true)}
                     disabled={saving}
                     variant="secondary"
                     className="flex-1"
@@ -1905,7 +1873,7 @@ function CalendarPageContent() {
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => handleCreateTraining(false)}
+                    onClick={() => handleCreateTraining(trainingForm, false)}
                     disabled={saving}
                     className="flex-1"
                   >

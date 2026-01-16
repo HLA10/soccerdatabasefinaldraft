@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
       // Delete all parts for these sessions
       await prisma.trainingSessionPart.deleteMany({
-        where: { trainingSessionId: { in: sessionIdsToDelete } },
+        where: { sessionId: { in: sessionIdsToDelete } },
       });
 
       // Delete all sessions
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
     // Delete parts for selected sessions
     await prisma.trainingSessionPart.deleteMany({
-      where: { trainingSessionId: { in: sessionIds } },
+      where: { sessionId: { in: sessionIds } },
     });
 
     // Delete the sessions

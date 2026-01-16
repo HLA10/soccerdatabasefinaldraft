@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
-import DashboardHeader from "@/components/DashboardHeader";
 
 interface Player {
   id: string;
@@ -141,24 +140,16 @@ export default function DashboardHome() {
 
   if (loading) {
     return (
-      <div className="max-w-[1600px]">
-        <DashboardHeader />
-        <div className="p-6">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#1A73E8] border-t-transparent"></div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-teal-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-[1600px]">
-      <DashboardHeader />
-
-      <div className="p-6 space-y-6">
-        {/* Stats Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+    <div className="space-y-6">
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
           <Card className="p-4">
             <p className="text-xs text-[#6B7280] mb-1">Total Players</p>
             <p className="text-2xl font-semibold text-[#111827]">{totalPlayers}</p>
@@ -200,12 +191,12 @@ export default function DashboardHome() {
               {topScorer ? `${getPlayerStats(topScorer).goals} goals` : ""}
             </p>
           </Card>
-        </div>
+      </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-6">
             {/* Recent Games */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -365,10 +356,10 @@ export default function DashboardHome() {
                 )}
               </Card>
             </div>
-          </div>
+        </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
+        {/* Right Column */}
+        <div className="space-y-6">
             {/* Injury & Wellness */}
             <Card className="p-6">
               <div className="mb-6">
@@ -465,8 +456,7 @@ export default function DashboardHome() {
                   <p className="text-sm font-medium text-[#111827] group-hover:text-[#1A73E8] transition-colors">Analytics</p>
                 </Link>
               </div>
-            </Card>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
