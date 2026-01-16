@@ -144,9 +144,7 @@ export async function DELETE(
     // Delete the match
     await prisma.match.delete({
       where: { id },
-    });
-
-    return NextResponse.json({ success: true, message: "Game deleted successfully" });
+    });    return NextResponse.json({ success: true, message: "Game deleted successfully" });
   } catch (error: any) {
     console.error("Error deleting game:", error);
     return NextResponse.json(

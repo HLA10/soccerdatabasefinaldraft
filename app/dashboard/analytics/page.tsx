@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Analytics"
           description="Team performance analytics and insights"
@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="max-w-7xl space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Analytics"
         description="Team performance analytics and insights"

@@ -85,7 +85,7 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Statistics"
           description="View team and player statistics"
@@ -99,7 +99,7 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="max-w-7xl space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="Statistics"
         description="View team and player statistics"

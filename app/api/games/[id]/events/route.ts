@@ -152,9 +152,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: gameId } = await params;
-
-    const events = await prisma.matchEvent.findMany({
+    const { id: gameId } = await params;    const events = await prisma.matchEvent.findMany({
       where: { gameId },
       include: {
         player: true,

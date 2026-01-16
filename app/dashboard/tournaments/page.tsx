@@ -52,7 +52,7 @@ export default function TournamentsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Tournaments"
           description="Manage and view all tournaments"
@@ -109,7 +109,7 @@ export default function TournamentsPage() {
   ];
 
   return (
-    <div className="max-w-7xl">
+    <div className="space-y-6">
       <PageHeader
         title="Tournaments"
         description="Manage and view all tournaments"

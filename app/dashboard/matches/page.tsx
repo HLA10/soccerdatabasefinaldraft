@@ -98,7 +98,7 @@ export default function MatchesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Matches"
           description="View and manage all matches"
@@ -112,7 +112,7 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="max-w-7xl">
+    <div className="space-y-6">
       <PageHeader
         title="Matches"
         description="View and manage all matches"

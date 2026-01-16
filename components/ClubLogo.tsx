@@ -20,8 +20,8 @@ export default function ClubLogo({ isCollapsed = false }: ClubLogoProps) {
     <img
       src={imageSrc}
       alt="Club Logo"
-      className={isCollapsed ? "w-12 h-auto object-contain" : "w-24 h-auto object-contain"}
-      style={{ maxHeight: isCollapsed ? '48px' : '96px' }}
+      className={`bg-transparent ${isCollapsed ? "w-12 h-auto object-contain" : "w-24 h-auto object-contain"}`}
+      style={{ maxHeight: isCollapsed ? '48px' : '96px', backgroundColor: 'transparent' }}
       onError={() => {
         console.error("Failed to load club logo from:", imageSrc);
         // Try alternative paths

@@ -80,8 +80,10 @@ export default function Sidebar() {
     <aside className="w-64 bg-slate-900 text-slate-100 min-h-screen fixed left-0 top-0 overflow-y-auto z-40">
       <div className="p-4">
         {/* Logo */}
-        <div className="mb-6 flex items-center space-x-2">
-          <ClubLogo isCollapsed={false} />
+        <div className="mb-6 flex items-center gap-2">
+          <div className="flex-shrink-0">
+            <ClubLogo isCollapsed={false} />
+          </div>
           <span className="text-base font-bold text-white">Football CMS</span>
         </div>
 

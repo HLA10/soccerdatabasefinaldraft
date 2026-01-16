@@ -47,7 +47,7 @@ export default function TeamsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Teams"
           description="Manage and view all your teams"
@@ -101,7 +101,7 @@ export default function TeamsPage() {
   ];
 
   return (
-    <div className="max-w-7xl">
+    <div className="space-y-6">
       <PageHeader
         title="Teams"
         description="Manage and view all your teams"

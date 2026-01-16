@@ -104,7 +104,7 @@ export default function PlayersPage() {
 
   if (loading || loadingTeams) {
     return (
-      <div className="max-w-7xl">
+      <div className="space-y-6">
         <PageHeader
           title="Team"
           description="View and manage all players and coaches across teams"
@@ -171,9 +171,8 @@ export default function PlayersPage() {
   ];
 
   return (
-    <div className="max-w-7xl">
-      <div className="mb-6">
-        <PageHeader
+    <div className="space-y-6">
+      <PageHeader
           title={selectedTeam ? selectedTeam.name : "Team"}
           description={selectedTeam ? `View and manage players for ${selectedTeam.name}` : "View and manage all players and coaches across teams"}
           action={
