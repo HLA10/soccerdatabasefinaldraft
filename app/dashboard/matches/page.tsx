@@ -117,9 +117,16 @@ export default function MatchesPage() {
         title="Matches"
         description="View and manage all matches"
         action={
-          <Link href="/dashboard/games/register">
-            <Button>Register Game</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/dashboard/games/mobile" className="lg:hidden">
+              <Button variant="secondary" className="text-sm">
+                Mobile View
+              </Button>
+            </Link>
+            <Link href="/dashboard/games/register">
+              <Button>Register Game</Button>
+            </Link>
+          </div>
         }
       />
 
