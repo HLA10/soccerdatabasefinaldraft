@@ -16,7 +16,7 @@ export async function DELETE(
 
     // Delete related parts first
     await prisma.trainingSessionPart.deleteMany({
-      where: { trainingSessionId: id },
+      where: { sessionId: id },
     });
 
     // Delete the training session
