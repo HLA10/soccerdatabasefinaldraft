@@ -25,7 +25,8 @@ interface Match {
     name: string;
   } | null;
   venue?: string | null;
-  stats: any[];
+  stats?: any[];
+  events?: any[];
 }
 
 export default function MatchesPage() {
@@ -42,10 +43,14 @@ export default function MatchesPage() {
   const fetchMatches = async () => {
     try {
       const res = await fetch("/api/games");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch games: ${res.statusText}`);
+      }
       const data = await res.json();
-      setMatches(data || []);
+      setMatches(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching matches:", error);
+      setMatches([]);
     } finally {
       setLoading(false);
     }
@@ -80,14 +85,21 @@ export default function MatchesPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   // Pagination calculations
@@ -148,10 +160,11 @@ export default function MatchesPage() {
             {currentMatches.map((match) => {
               const homeTeamName = match.homeTeam?.name || match.team?.name || "Home Team";
               const awayTeamName = match.awayTeam?.name || match.opponentName || match.opponent || "Away Team";
-              const totalGoals = match.stats.reduce(
-                (sum: number, stat: any) => sum + (stat.goals || 0),
-                0
-              );
+              
+              // Calculate goals from events if stats are not available
+              const totalGoals = match.stats
+                ? match.stats.reduce((sum: number, stat: any) => sum + (stat.goals || 0), 0)
+                : (match.events?.filter((e: any) => e.type === "GOAL").length || 0);
 
               return (
                 <Link key={match.id} href={`/dashboard/games/${match.id}/squad`}>
