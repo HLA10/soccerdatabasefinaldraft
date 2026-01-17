@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const CLUB_LOGO_PATH = "/club-logo.png.jpg";
+const CLUB_LOGO_PATH = "/dif-logo.png";
 
 interface ClubLogoProps {
   isCollapsed?: boolean;
@@ -20,14 +20,15 @@ export default function ClubLogo({ isCollapsed = false }: ClubLogoProps) {
     <img
       src={imageSrc}
       alt="Club Logo"
-      className={`bg-transparent ${isCollapsed ? "w-12 h-auto object-contain" : "w-24 h-auto object-contain"}`}
-      style={{ maxHeight: isCollapsed ? '48px' : '96px', backgroundColor: 'transparent' }}
+      className={`bg-transparent ${isCollapsed ? "w-10 h-10 object-contain" : "w-14 h-14 object-contain"}`}
+      style={{ maxHeight: isCollapsed ? '40px' : '56px', backgroundColor: 'transparent' }}
       onError={() => {
         console.error("Failed to load club logo from:", imageSrc);
         // Try alternative paths
         const alternatives = [
-          "/club-logo.jpg",
+          "/dif-logo.jpg",
           "/club-logo.png",
+          "/club-logo.jpg",
           "/logo.png",
           "/logo.jpg",
         ];
