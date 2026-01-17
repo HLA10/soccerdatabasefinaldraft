@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const CLUB_LOGO_PATH = "/dif-logo.png";
+const CLUB_LOGO_PATH = "/dif-logo.png.png";
 
 interface ClubLogoProps {
   isCollapsed?: boolean;
