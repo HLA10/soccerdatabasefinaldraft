@@ -22,6 +22,7 @@ interface Game {
   time?: string | null;
   opponent?: string | null;
   opponentName?: string | null;
+  opponentAgeGroup?: string | null;
   opponentLogoUrl?: string | null;
   homeTeam?: {
     id: string;
@@ -255,9 +256,12 @@ export default function GamesMobilePage() {
                   const homeTeam = game.homeTeam || game.team;
                   const awayTeam = game.awayTeam;
                   
-                  const opponentName = isHomeGame
+                  const opponentNameBase = isHomeGame
                     ? (awayTeam?.name || game.opponentName || game.opponent || "Opponent")
                     : (homeTeam?.name || "Opponent");
+                  const opponentName = game.opponentAgeGroup 
+                    ? `${opponentNameBase} ${game.opponentAgeGroup}` 
+                    : opponentNameBase;
                   
                   const opponentLogo = isHomeGame
                     ? (awayTeam?.club?.logoUrl || awayTeam?.logoUrl || game.opponentLogoUrl || null)

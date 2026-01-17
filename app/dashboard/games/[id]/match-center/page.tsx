@@ -26,8 +26,28 @@ interface MatchEvent {
 
 interface Game {
   id: string;
-  homeTeam: { id: string; name: string };
-  awayTeam: { id: string; name: string };
+  homeTeam: { 
+    id: string; 
+    name: string;
+    logoUrl?: string | null;
+    club?: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    } | null;
+  };
+  awayTeam: { 
+    id: string; 
+    name: string;
+    logoUrl?: string | null;
+    club?: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    } | null;
+  };
+  opponentLogoUrl?: string | null;
+  opponentAgeGroup?: string | null;
   scoreHome: number;
   scoreAway: number;
   date: string;
@@ -179,8 +199,18 @@ export default function MatchCenterPage() {
       {/* Scoreboard */}
       <Card className="mb-6">
         <div className="flex items-center justify-between p-6">
-          <div className="flex-1 text-center">
+          <div className="flex-1 flex flex-col items-center">
             <p className="text-sm text-[#6B7280] mb-2">Home</p>
+            {(game.homeTeam.logoUrl || game.homeTeam.club?.logoUrl) && (
+              <div className="relative w-16 h-16 mb-2">
+                <Image
+                  src={game.homeTeam.logoUrl || game.homeTeam.club?.logoUrl || ""}
+                  alt={game.homeTeam.name}
+                  fill
+                  className="object-contain rounded"
+                />
+              </div>
+            )}
             <p className="text-xl font-semibold text-[#111827]">
               {game.homeTeam.name}
             </p>
@@ -190,10 +220,20 @@ export default function MatchCenterPage() {
               {game.scoreHome} - {game.scoreAway}
             </div>
           </div>
-          <div className="flex-1 text-center">
+          <div className="flex-1 flex flex-col items-center">
             <p className="text-sm text-[#6B7280] mb-2">Away</p>
+            {(game.awayTeam.logoUrl || game.awayTeam.club?.logoUrl || game.opponentLogoUrl) && (
+              <div className="relative w-16 h-16 mb-2">
+                <Image
+                  src={game.awayTeam.logoUrl || game.awayTeam.club?.logoUrl || game.opponentLogoUrl || ""}
+                  alt={game.awayTeam.name}
+                  fill
+                  className="object-contain rounded"
+                />
+              </div>
+            )}
             <p className="text-xl font-semibold text-[#111827]">
-              {game.awayTeam.name}
+              {game.awayTeam.name}{game.opponentAgeGroup ? ` ${game.opponentAgeGroup}` : ''}
             </p>
           </div>
         </div>

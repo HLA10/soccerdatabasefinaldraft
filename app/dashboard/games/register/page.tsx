@@ -33,6 +33,7 @@ interface GameForm {
   homeTeamId: string;
   opponentTeamId: string;
   opponentName: string;
+  opponentAgeGroup: string;
   matchType: string;
   date: string;
   startTime: string;
@@ -67,6 +68,7 @@ export default function RegisterGamePage() {
     homeTeamId: "",
     opponentTeamId: "",
     opponentName: "",
+    opponentAgeGroup: "",
     matchType: "FRIENDLY",
     date: "",
     startTime: "",
@@ -255,6 +257,7 @@ export default function RegisterGamePage() {
           formationType: form.matchFormat,
           matchType: form.matchType,
           opponentName: form.opponentName || null,
+          opponentAgeGroup: form.opponentAgeGroup || null,
           opponentLogoUrl: opponentLogoUrl,
         }),
       });
@@ -517,6 +520,18 @@ export default function RegisterGamePage() {
                     </Button>
                   </div>
                 )}
+              </div>
+
+              {/* Age Group */}
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-[#111827]">Age Group</label>
+                <input
+                  type="text"
+                  value={form.opponentAgeGroup}
+                  onChange={(e) => updateForm("opponentAgeGroup", e.target.value)}
+                  placeholder="e.g., U10, U15 (optional)"
+                  className="w-full bg-white border border-[#E5E7EB] rounded-lg px-4 py-3 text-sm text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent"
+                />
               </div>
 
               {/* Location */}

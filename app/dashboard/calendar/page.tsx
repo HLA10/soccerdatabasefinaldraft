@@ -14,6 +14,7 @@ interface Match {
   date: string;
   opponent: string;
   opponentName?: string | null;
+  opponentAgeGroup?: string | null;
   opponentLogoUrl?: string | null;
   team: {
     id: string;
@@ -143,6 +144,7 @@ function CalendarPageContent() {
     opponent: "",
     opponentTeamId: "",
     opponentName: "",
+    opponentAgeGroup: "",
     teamId: "",
     matchType: "FRIENDLY",
     venue: "",
@@ -759,6 +761,7 @@ function CalendarPageContent() {
           venueName: eventForm.venueName || null,
           matchType: eventForm.matchType,
           opponentName: eventForm.opponentName || selectedOpponent?.name || null,
+          opponentAgeGroup: eventForm.opponentAgeGroup || null,
           opponentLogoUrl: selectedOpponent?.logoUrl || selectedOpponent?.club?.logoUrl || null,
           tournamentId: eventForm.tournamentId || null,
         }),
@@ -782,6 +785,7 @@ function CalendarPageContent() {
           opponent: "",
           opponentTeamId: "",
           opponentName: "",
+          opponentAgeGroup: "",
           teamId: "",
           matchType: "FRIENDLY",
           venue: "",
@@ -803,6 +807,7 @@ function CalendarPageContent() {
             opponent: "",
             opponentTeamId: "",
             opponentName: "",
+            opponentAgeGroup: "",
             teamId: "",
             matchType: "FRIENDLY",
             venue: "",
@@ -851,6 +856,7 @@ function CalendarPageContent() {
         opponent: "",
         opponentTeamId: "",
         opponentName: "",
+        opponentAgeGroup: "",
         teamId: "",
         matchType: "FRIENDLY",
         venue: "",
@@ -870,6 +876,7 @@ function CalendarPageContent() {
           opponent: "",
           opponentTeamId: "",
           opponentName: "",
+          opponentAgeGroup: "",
           teamId: "",
           matchType: "FRIENDLY",
           venue: "",
@@ -1012,13 +1019,16 @@ function CalendarPageContent() {
           games.forEach((game) => {
             const homeTeamName = game.homeTeam?.name || game.team?.name || "Home";
             const awayTeamName = game.awayTeam?.name || game.opponentName || game.opponent || "Away";
+            const awayTeamNameWithAge = game.opponentAgeGroup 
+              ? `${awayTeamName} ${game.opponentAgeGroup}` 
+              : awayTeamName;
             const homeLogo = game.homeTeam?.club?.logoUrl || game.homeTeam?.logoUrl || game.team?.club?.logoUrl || game.team?.logoUrl || null;
             const awayLogo = game.awayTeam?.club?.logoUrl || game.awayTeam?.logoUrl || game.opponentLogoUrl || null;
             allEvents.push({
               id: game.id,
               type: "game",
               date: game.date,
-              title: `${homeTeamName} vs ${awayTeamName}`,
+              title: `${homeTeamName} vs ${awayTeamNameWithAge}`,
               link: `/dashboard/games/${game.id}/squad`,
               homeLogo,
               awayLogo,
@@ -1038,11 +1048,14 @@ function CalendarPageContent() {
           matches.forEach((match) => {
             const homeLogo = match.homeTeam?.club?.logoUrl || match.homeTeam?.logoUrl || match.team?.club?.logoUrl || match.team?.logoUrl || null;
             const awayLogo = match.awayTeam?.club?.logoUrl || match.awayTeam?.logoUrl || match.opponentLogoUrl || null;
+            const opponentNameWithAge = match.opponentAgeGroup 
+              ? `${match.opponent} ${match.opponentAgeGroup}` 
+              : match.opponent;
             allEvents.push({
               id: match.id,
               type: "game",
               date: match.date,
-              title: `${match.team.name} vs ${match.opponent}`,
+              title: `${match.team.name} vs ${opponentNameWithAge}`,
               link: `/dashboard/games/${match.id}/squad`,
               homeLogo,
               awayLogo,
@@ -1091,15 +1104,30 @@ function CalendarPageContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {event.type === "game" && event.awayLogo && (
-                          <div className="relative w-8 h-8 flex-shrink-0">
-                            <Image
-                              src={event.awayLogo}
-                              alt=""
-                              fill
-                              className="object-contain rounded"
-                            />
-                          </div>
+                        {event.type === "game" && (
+                          <>
+                            {event.homeLogo && (
+                              <div className="relative w-8 h-8 flex-shrink-0">
+                                <Image
+                                  src={event.homeLogo}
+                                  alt=""
+                                  fill
+                                  className="object-contain rounded"
+                                />
+                              </div>
+                            )}
+                            <span className="text-xs text-[#6B7280]">vs</span>
+                            {event.awayLogo && (
+                              <div className="relative w-8 h-8 flex-shrink-0">
+                                <Image
+                                  src={event.awayLogo}
+                                  alt=""
+                                  fill
+                                  className="object-contain rounded"
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
                         <div className={`w-2 h-2 rounded-full ${event.type === "game" ? "bg-[#10B981]" : event.type === "training" ? "bg-[#F97316]" : "bg-[#8B5CF6]"}`}></div>
                         <div>
@@ -1145,6 +1173,7 @@ function CalendarPageContent() {
                     opponent: "",
                     opponentTeamId: "",
                     opponentName: "",
+                    opponentAgeGroup: "",
                     teamId: "",
                     matchType: "FRIENDLY",
                     venue: "",
@@ -1327,6 +1356,19 @@ function CalendarPageContent() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-[#111827]">
+                    Age Group
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.opponentAgeGroup}
+                    onChange={(e) => setEventForm({ ...eventForm, opponentAgeGroup: e.target.value })}
+                    placeholder="e.g., U10, U15 (optional)"
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-3 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#1A73E8] focus:border-transparent transition-all bg-white hover:border-[#D1D5DB]"
+                  />
                 </div>
 
                 <div>

@@ -81,6 +81,7 @@ export async function POST(req: Request) {
           formationType,
           matchType,
           opponentName,
+          opponentAgeGroup,
           opponentLogoUrl,
           tournamentId,
         } = await req.json();
@@ -107,6 +108,22 @@ export async function POST(req: Request) {
       },
     });
 
+    // Auto-fetch club logo if opponentName matches a club name and logo not provided
+    let finalOpponentLogoUrl = opponentLogoUrl;
+    if (!finalOpponentLogoUrl && opponentName) {
+      const matchingClub = await prisma.club.findFirst({
+        where: {
+          name: {
+            equals: opponentName.trim(),
+            mode: "insensitive",
+          },
+        },
+      });
+      if (matchingClub?.logoUrl) {
+        finalOpponentLogoUrl = matchingClub.logoUrl;
+      }
+    }
+
     const game = await prisma.match.create({
       data: {
         date: matchDateTime,
@@ -118,7 +135,8 @@ export async function POST(req: Request) {
         teamId: homeTeamId, // Keep for backward compatibility
         opponent: opponentName || awayTeam?.name || "", // Set opponent name
         opponentName: opponentName || awayTeam?.name || null,
-        opponentLogoUrl: opponentLogoUrl || awayTeam?.club?.logoUrl || awayTeam?.logoUrl || null,
+        opponentAgeGroup: opponentAgeGroup || null,
+        opponentLogoUrl: finalOpponentLogoUrl || awayTeam?.club?.logoUrl || awayTeam?.logoUrl || null,
         matchType: matchType || "FRIENDLY",
         tournamentId: tournamentId || null,
         formationType: formationType || "ELEVEN_V_ELEVEN",

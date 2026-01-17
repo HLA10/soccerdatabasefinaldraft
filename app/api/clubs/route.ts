@@ -40,31 +40,71 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create club
-    const club = await prisma.club.create({
-      data: {
-        name,
-        logoUrl: logoUrl || null,
-      },
+    // Check if club with this name already exists
+    const existingClub = await prisma.club.findUnique({
+      where: { name: name.trim() },
       include: {
         teams: true,
       },
     });
 
-    // If teamName is provided, create a team for this club
-    if (teamName) {
-      await prisma.team.create({
+    let club;
+    if (existingClub) {
+      // Club already exists, use it
+      club = existingClub;
+    } else {
+      // Create new club
+      club = await prisma.club.create({
         data: {
-          name: teamName,
-          clubId: club.id,
-          logoUrl: logoUrl || null, // Use club logo as default
+          name: name.trim(),
+          logoUrl: logoUrl || null,
+        },
+        include: {
+          teams: true,
         },
       });
     }
 
-    return NextResponse.json(club);
+    // If teamName is provided, check if team already exists for this club
+    if (teamName) {
+      const existingTeam = await prisma.team.findFirst({
+        where: {
+          name: teamName.trim(),
+          clubId: club.id,
+        },
+      });
+
+      if (!existingTeam) {
+        await prisma.team.create({
+          data: {
+            name: teamName.trim(),
+            clubId: club.id,
+            logoUrl: logoUrl || null, // Use club logo as default
+          },
+        });
+      }
+    }
+
+    // Refresh club data to include any newly created team
+    const updatedClub = await prisma.club.findUnique({
+      where: { id: club.id },
+      include: {
+        teams: true,
+      },
+    });
+
+    return NextResponse.json(updatedClub || club);
   } catch (error: any) {
     console.error("Error creating club:", error);
+    
+    // Handle unique constraint error specifically
+    if (error.code === "P2002" && error.meta?.target?.includes("name")) {
+      return NextResponse.json(
+        { error: "A club with this name already exists" },
+        { status: 409 }
+      );
+    }
+    
     return NextResponse.json(
       { error: error.message || "Failed to create club" },
       { status: 500 }

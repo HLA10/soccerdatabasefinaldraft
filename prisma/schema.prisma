@@ -59,6 +59,7 @@ model User {
   receivedInvites   Invite[]                  @relation("InviteReceiver")
   developmentTalks  DevelopmentTalk[]         @relation("TalkCoach")
   trainingTemplates TrainingSessionTemplate[] @relation("TemplateCreator")
+  scoutingReports   ScoutingReport[]
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
 
@@ -66,12 +67,13 @@ model User {
 }
 
 model Club {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  logoUrl   String?
-  teams     Team[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(cuid())
+  name            String           @unique
+  logoUrl         String?
+  teams           Team[]
+  scoutingReports ScoutingReport[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@map("clubs")
 }
@@ -91,6 +93,7 @@ model Team {
   matchEvents                MatchEvent[]
   trainingSessions           TrainingSession[]
   recurringTrainingSchedules RecurringTrainingSchedule[] @relation("RecurringSchedules")
+  scoutingReports            ScoutingReport[]
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
 
@@ -171,34 +174,35 @@ enum MatchEventType {
 }
 
 model Match {
-  id              String           @id @default(cuid())
-  date            DateTime
-  time            DateTime?
-  venue           String?
-  venueName       String?
-  opponent        String
-  opponentName    String?
-  opponentLogoUrl String?
-  matchType       MatchType?       @default(FRIENDLY)
-  tournamentId    String?
-  tournament      Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
-  teamId          String
-  team            Team             @relation("TeamMatches", fields: [teamId], references: [id], onDelete: Cascade)
-  homeTeamId      String?
-  homeTeam        Team?            @relation("HomeMatches", fields: [homeTeamId], references: [id], onDelete: SetNull)
-  awayTeamId      String?
-  awayTeam        Team?            @relation("AwayMatches", fields: [awayTeamId], references: [id], onDelete: SetNull)
-  scoreHome       Int              @default(0)
-  scoreAway       Int              @default(0)
-  formationType   FormationType?   @default(ELEVEN_V_ELEVEN)
-  stats           MatchStats[]
-  squad           GameSquad[]
-  formations      Formation[]
-  lineupPositions LineupPosition[]
-  events          MatchEvent[]
-  playerMinutes   PlayerMinutes[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  date             DateTime
+  time             DateTime?
+  venue            String?
+  venueName        String?
+  opponent         String
+  opponentName     String?
+  opponentLogoUrl  String?
+  opponentAgeGroup String?
+  matchType        MatchType?       @default(FRIENDLY)
+  tournamentId     String?
+  tournament       Tournament?      @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  teamId           String
+  team             Team             @relation("TeamMatches", fields: [teamId], references: [id], onDelete: Cascade)
+  homeTeamId       String?
+  homeTeam         Team?            @relation("HomeMatches", fields: [homeTeamId], references: [id], onDelete: SetNull)
+  awayTeamId       String?
+  awayTeam         Team?            @relation("AwayMatches", fields: [awayTeamId], references: [id], onDelete: SetNull)
+  scoreHome        Int              @default(0)
+  scoreAway        Int              @default(0)
+  formationType    FormationType?   @default(ELEVEN_V_ELEVEN)
+  stats            MatchStats[]
+  squad            GameSquad[]
+  formations       Formation[]
+  lineupPositions  LineupPosition[]
+  events           MatchEvent[]
+  playerMinutes    PlayerMinutes[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@map("matches")
 }
@@ -408,4 +412,22 @@ model TrainingSessionPart {
   updatedAt  DateTime             @updatedAt
 
   @@map("training_session_parts")
+}
+
+model ScoutingReport {
+  id           String   @id @default(cuid())
+  playerName   String
+  clubId       String?
+  club         Club?    @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  ageGroup     String?
+  notes        String
+  dateObserved DateTime
+  createdBy    String
+  creator      User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("scouting_reports")
 }

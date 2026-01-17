@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
@@ -12,17 +13,37 @@ interface Match {
   date: string;
   opponent: string;
   opponentName?: string | null;
+  opponentAgeGroup?: string | null;
+  opponentLogoUrl?: string | null;
   team: {
     id: string;
     name: string;
+    logoUrl?: string | null;
+    club?: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    } | null;
   };
   homeTeam?: {
     id: string;
     name: string;
+    logoUrl?: string | null;
+    club?: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    } | null;
   } | null;
   awayTeam?: {
     id: string;
     name: string;
+    logoUrl?: string | null;
+    club?: {
+      id: string;
+      name: string;
+      logoUrl?: string | null;
+    } | null;
   } | null;
   venue?: string | null;
   stats?: any[];
@@ -159,7 +180,13 @@ export default function MatchesPage() {
           <div className="space-y-4">
             {currentMatches.map((match) => {
               const homeTeamName = match.homeTeam?.name || match.team?.name || "Home Team";
-              const awayTeamName = match.awayTeam?.name || match.opponentName || match.opponent || "Away Team";
+              const awayTeamNameBase = match.awayTeam?.name || match.opponentName || match.opponent || "Away Team";
+              const awayTeamName = match.opponentAgeGroup 
+                ? `${awayTeamNameBase} ${match.opponentAgeGroup}` 
+                : awayTeamNameBase;
+              
+              const homeLogo = match.homeTeam?.club?.logoUrl || match.homeTeam?.logoUrl || match.team?.club?.logoUrl || match.team?.logoUrl || null;
+              const awayLogo = match.awayTeam?.club?.logoUrl || match.awayTeam?.logoUrl || match.opponentLogoUrl || null;
               
               // Calculate goals from events if stats are not available
               const totalGoals = match.stats
@@ -172,9 +199,29 @@ export default function MatchesPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-4 mb-2">
+                          {homeLogo && (
+                            <div className="relative w-10 h-10 flex-shrink-0">
+                              <Image
+                                src={homeLogo}
+                                alt={homeTeamName}
+                                fill
+                                className="object-contain rounded"
+                              />
+                            </div>
+                          )}
                           <h3 className="text-base font-semibold text-[#111827]">
                             {homeTeamName} vs {awayTeamName}
                           </h3>
+                          {awayLogo && (
+                            <div className="relative w-10 h-10 flex-shrink-0">
+                              <Image
+                                src={awayLogo}
+                                alt={awayTeamNameBase}
+                                fill
+                                className="object-contain rounded"
+                              />
+                            </div>
+                          )}
                           {match.venue && (
                             <span className="text-sm text-[#6B7280]">• {match.venue}</span>
                           )}

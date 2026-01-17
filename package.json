@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-teams": "npx tsx scripts/create-teams.ts"
+    "create-teams": "npx tsx scripts/create-teams.ts",
+    "import-allsvenskan-clubs": "npx tsx scripts/import-clubs-from-allsvenskan.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.5",

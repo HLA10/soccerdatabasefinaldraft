@@ -142,6 +142,12 @@ export default function Sidebar() {
           <NavLink href="/dashboard/training" pathname={pathname}>Training</NavLink>
         </NavSection>
 
+        {/* Scouting */}
+        <NavSection title="Scouting">
+          <NavLink href="/dashboard/scouting" pathname={pathname}>Scouting Reports</NavLink>
+          <NavLink href="/dashboard/scouting/create" pathname={pathname}>Create Report</NavLink>
+        </NavSection>
+
         {/* Games */}
         <NavSection title="Games">
           <NavLink href="/dashboard/games/register" pathname={pathname}>Register Game</NavLink>

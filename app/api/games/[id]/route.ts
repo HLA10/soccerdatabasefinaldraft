@@ -11,9 +11,21 @@ export async function GET(
     const game = await prisma.match.findUnique({
       where: { id },
       include: {
-        homeTeam: true,
-        awayTeam: true,
-        team: true,
+        homeTeam: {
+          include: {
+            club: true,
+          },
+        },
+        awayTeam: {
+          include: {
+            club: true,
+          },
+        },
+        team: {
+          include: {
+            club: true,
+          },
+        },
         squad: {
           include: {
             player: {
