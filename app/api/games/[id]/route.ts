@@ -139,9 +139,7 @@ export async function DELETE(
       where: { gameId: id },
     });    await prisma.playerMinutes.deleteMany({
       where: { gameId: id },
-    });
-
-    await prisma.lineupPosition.deleteMany({
+    });    await prisma.lineupPosition.deleteMany({
       where: { gameId: id },
     });
 

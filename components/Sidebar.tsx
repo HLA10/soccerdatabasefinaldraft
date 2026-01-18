@@ -63,9 +63,10 @@ export default function Sidebar() {
     fetch("/api/teams")
       .then((res) => res.json())
       .then((data) => {
-        setTeams(data || []);
-        if (data && data.length > 0 && !selectedTeamId) {
-          setSelectedTeamId(data[0].id);
+        const filteredTeams = (data || []).filter((team: Team) => team.name !== "Hammarby F2011-A");
+        setTeams(filteredTeams);
+        if (filteredTeams.length > 0 && !selectedTeamId) {
+          setSelectedTeamId(filteredTeams[0].id);
         }
         setLoading(false);
       })
@@ -116,11 +117,13 @@ export default function Sidebar() {
                   }}
                   className="w-full px-3 py-2 rounded-md text-sm font-medium bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
+                  {teams
+                    .filter((team) => team.name !== "Hammarby F2011-A")
+                    .map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
                 </select>
               ) : (
                 <div className="text-sm text-slate-400 px-3 py-2">No teams available</div>

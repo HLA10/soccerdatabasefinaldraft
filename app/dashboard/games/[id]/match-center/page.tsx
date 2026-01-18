@@ -194,7 +194,17 @@ export default function MatchCenterPage() {
 
   return (
     <div className="max-w-[1600px]">
-      <PageHeader title="Match Center" />
+      <PageHeader 
+        title="Match Center"
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => router.push(`/dashboard/games/${params.id}/scoreboard`)}
+          >
+            View Scoreboard
+          </Button>
+        }
+      />
 
       {/* Scoreboard */}
       <Card className="mb-6">

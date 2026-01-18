@@ -2,7 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
 const connectionString = process.env.DATABASE_URL;
@@ -26,8 +26,52 @@ interface TeamData {
   teamUrl: string; // Can be a full URL or a slug
 }
 
+// Download image from URL and save locally
+async function downloadAndSaveImage(url: string, teamName: string): Promise<string | null> {
+  try {
+    console.log(`  📥 Downloading image from: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`  ⚠️  Failed to download (status: ${response.status})`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Ensure uploads directory exists
+    const uploadsDir = join(process.cwd(), "public", "uploads", "club-logos");
+    if (!existsSync(uploadsDir)) {
+      mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Generate safe filename
+    const safeName = teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const extension = url.match(/\.(png|jpg|jpeg|svg|webp)(\?|$)/i)?.[1] || 'png';
+    const filename = `${safeName}-logo.${extension}`;
+    
+    // Save file
+    const filePath = join(uploadsDir, filename);
+    writeFileSync(filePath, buffer);
+
+    // Return the public URL path
+    const publicUrl = `/uploads/club-logos/${filename}`;
+    console.log(`  ✅ Saved locally to: ${publicUrl}`);
+    return publicUrl;
+  } catch (error: any) {
+    console.log(`  ❌ Error downloading: ${error.message}`);
+    return null;
+  }
+}
+
 // Function to extract logo from Allsvenskan team page
-async function extractLogoFromAllsvenskan(slug: string): Promise<string | null> {
+async function extractLogoFromAllsvenskan(slug: string, teamName: string): Promise<string | null> {
   const teamUrl = `https://allsvenskan.se/lagen/${slug}`;
   
   try {
@@ -54,7 +98,8 @@ async function extractLogoFromAllsvenskan(slug: string): Promise<string | null> 
     if (ogImageMatch) {
       const logoUrl = ogImageMatch[1];
       console.log(`  ✅ Found logo (og:image): ${logoUrl}`);
-      return logoUrl;
+      // Download and save it locally
+      return await downloadAndSaveImage(logoUrl, teamName);
     }
 
     // 2. Look for Twitter card image
@@ -62,7 +107,8 @@ async function extractLogoFromAllsvenskan(slug: string): Promise<string | null> 
     if (twitterImageMatch) {
       const logoUrl = twitterImageMatch[1];
       console.log(`  ✅ Found logo (twitter:image): ${logoUrl}`);
-      return logoUrl;
+      // Download and save it locally
+      return await downloadAndSaveImage(logoUrl, teamName);
     }
 
     // 3. Look for img tags with team logo
@@ -79,7 +125,8 @@ async function extractLogoFromAllsvenskan(slug: string): Promise<string | null> 
           ? match[1] 
           : new URL(match[1], 'https://allsvenskan.se').href;
         console.log(`  ✅ Found logo (img tag): ${logoUrl}`);
-        return logoUrl;
+        // Download and save it locally
+        return await downloadAndSaveImage(logoUrl, teamName);
       }
     }
 
@@ -96,7 +143,8 @@ async function extractLogoFromAllsvenskan(slug: string): Promise<string | null> 
         const testResponse = await fetch(logoUrl, { method: 'HEAD' });
         if (testResponse.ok) {
           console.log(`  ✅ Found logo (common path): ${logoUrl}`);
-          return logoUrl;
+          // Download and save it locally
+          return await downloadAndSaveImage(logoUrl, teamName);
         }
       } catch {
         // Continue to next path
@@ -154,9 +202,11 @@ async function importClubs() {
       }
     }
 
-    console.log(`Found ${teams.length} teams to import from Allsvenskan...\n`);
+    console.log(`Found ${teams.length} teams to import/update from Allsvenskan...\n`);
+    console.log(`This script will download logos and save them locally.\n`);
 
     let created = 0;
+    let updated = 0;
     let skipped = 0;
     let errors = 0;
 
@@ -164,40 +214,56 @@ async function importClubs() {
       try {
         console.log(`Processing: ${team.name}...`);
         
-        // Check if club already exists
-        const existing = await prisma.club.findUnique({
+        // Find or create club
+        let club = await prisma.club.findUnique({
           where: { name: team.name },
         });
 
-        if (existing) {
-          console.log(`  ⏭️  Skipped: ${team.name} (already exists)\n`);
-          skipped++;
-          continue;
-        }
+        const isNew = !club;
 
         // Determine logo URL
         let logoUrl: string | null = null;
         
-        // If teamUrl is a full URL, use it directly
+        // If teamUrl is a full URL, try to download and save it locally
         if (team.teamUrl.startsWith('http://') || team.teamUrl.startsWith('https://')) {
-          logoUrl = team.teamUrl;
-          console.log(`  ✅ Using provided logo URL: ${logoUrl}`);
+          console.log(`  📥 Attempting to download from provided URL...`);
+          logoUrl = await downloadAndSaveImage(team.teamUrl, team.name);
+          
+          // If download failed, try Allsvenskan scraping as fallback
+          if (!logoUrl) {
+            console.log(`  🔄 Download failed, trying Allsvenskan scraping...`);
+            // Try to extract slug from team name
+            const slug = team.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            logoUrl = await extractLogoFromAllsvenskan(slug, team.name);
+          }
         } else {
           // Otherwise, it's a slug - try to extract from Allsvenskan
           console.log(`  🔍 Extracting logo from Allsvenskan (slug: ${team.teamUrl})...`);
-          logoUrl = await extractLogoFromAllsvenskan(team.teamUrl);
+          logoUrl = await extractLogoFromAllsvenskan(team.teamUrl, team.name);
         }
 
-        // Create club
-        await prisma.club.create({
-          data: {
-            name: team.name,
-            logoUrl: logoUrl || null,
-          },
-        });
-
-        console.log(`  ✅ Created: ${team.name}${logoUrl ? ` with logo` : ' (no logo)'}\n`);
-        created++;
+        // Create or update club
+        if (isNew) {
+          club = await prisma.club.create({
+            data: {
+              name: team.name,
+              logoUrl: logoUrl || null,
+            },
+          });
+          console.log(`  ✅ Created: ${team.name}${logoUrl ? ` with logo` : ' (no logo)'}\n`);
+          created++;
+        } else if (logoUrl && club && club.logoUrl !== logoUrl) {
+          // Update existing club with new logo
+          club = await prisma.club.update({
+            where: { id: club.id },
+            data: { logoUrl },
+          });
+          console.log(`  ✅ Updated: ${team.name} with new logo: ${logoUrl}\n`);
+          updated++;
+        } else {
+          console.log(`  ⏭️  Skipped: ${team.name} (already exists${club && club.logoUrl ? ' with logo' : ''})\n`);
+          skipped++;
+        }
       } catch (error: any) {
         if (error.code === "P2002") {
           console.log(`  ⏭️  Skipped: ${team.name} (already exists)\n`);
@@ -211,8 +277,10 @@ async function importClubs() {
 
     console.log(`\n✅ Import complete!`);
     console.log(`   Created: ${created}`);
+    console.log(`   Updated: ${updated}`);
     console.log(`   Skipped: ${skipped}`);
     console.log(`   Errors: ${errors}`);
+    console.log(`\n📁 Logos saved to: public/uploads/club-logos/`);
   } catch (error: any) {
     console.error("Import failed:", error);
     process.exit(1);

@@ -78,27 +78,29 @@ export default function SquadSelectionPage() {
           setSelectedPlayers(new Set(squadPlayerIds));
         }
 
-        // Load all players from the home team (or team for legacy games)
+        // Load all players - show players from the home team AND players without a team assigned
         const teamId = gameData.homeTeam?.id || gameData.team?.id;
-        if (teamId) {
-          try {
-            const playersRes = await fetch("/api/players");
-            if (!playersRes.ok) {
-              throw new Error("Failed to fetch players");
-            }
-            const playersData = await playersRes.json();
-            const homeTeamPlayers = (playersData || []).filter(
-              (p: Player) => p?.team?.id === teamId
-            );
-            setPlayers(homeTeamPlayers);
-          } catch (playersErr: any) {
-            console.error("Error loading players:", playersErr);
-            setPlayers([]);
-            setError(playersErr.message || "Failed to load players");
+        try {
+          const playersRes = await fetch("/api/players");
+          if (!playersRes.ok) {
+            throw new Error("Failed to fetch players");
           }
-        } else {
+          const playersData = await playersRes.json();
+          
+          // Show players from the team OR players without a team assigned
+          const availablePlayers = (playersData || []).filter(
+            (p: Player) => !p.team || p.team.id === teamId
+          );
+          
+          setPlayers(availablePlayers);
+          
+          if (availablePlayers.length === 0) {
+            setError("No players available. Please add players to your team first.");
+          }
+        } catch (playersErr: any) {
+          console.error("Error loading players:", playersErr);
           setPlayers([]);
-          setError("No team found for this game");
+          setError(playersErr.message || "Failed to load players");
         }
 
         setLoading(false);
@@ -290,7 +292,15 @@ export default function SquadSelectionPage() {
 
         {players.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-sm text-[#6B7280]">No players available for this team</p>
+            <p className="text-sm text-[#6B7280] mb-4">
+              No players available. Players need to be assigned to your team or have no team assignment.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/dashboard/players/create")}
+            >
+              Add Player
+            </Button>
           </div>
         )}
 

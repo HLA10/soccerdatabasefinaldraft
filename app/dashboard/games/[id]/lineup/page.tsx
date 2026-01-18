@@ -24,6 +24,17 @@ interface Game {
     player: Player;
     status: string;
   }>;
+  formations?: Array<{
+    id: string;
+    formationName: string;
+    formationType: string;
+  }>;
+  lineupPositions?: Array<{
+    id: string;
+    positionCode: string;
+    playerId: string;
+    player?: Player;
+  }>;
 }
 
 const FORMATIONS: Record<string, { name: string; positions: string[] }> = {
@@ -62,8 +73,16 @@ export default function LineupPage() {
   useEffect(() => {
     if (params.id) {
       fetch(`/api/games/${params.id}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`Failed to load game: ${res.status}`);
+          }
+          return res.json();
+        })
         .then((data) => {
+          if (!data) {
+            throw new Error("No game data received");
+          }
           setGame(data);
           if (data.formations && data.formations.length > 0) {
             const formation = data.formations[0];
@@ -80,22 +99,29 @@ export default function LineupPage() {
                 : "ELEVEN_V_ELEVEN_4-3-3";
             setSelectedFormation(defaultFormation);
           }
-          if (data.lineupPositions) {
+          if (data.lineupPositions && Array.isArray(data.lineupPositions)) {
             const positions: Record<string, string> = {};
             data.lineupPositions.forEach((lp: any) => {
-              positions[lp.positionCode] = lp.playerId;
+              if (lp.positionCode && lp.playerId) {
+                positions[lp.positionCode] = lp.playerId;
+              }
             });
             setLineup(positions);
           }
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch((err) => {
+          console.error("Error loading game:", err);
+          setError(err.message || "Failed to load game");
+          setLoading(false);
+        });
     }
   }, [params.id]);
 
-  const availablePlayers = game?.squad
-    ?.filter((s) => s.status === "CALLED" || s.status === "BENCH")
-    .map((s) => s.player) || [];
+  const availablePlayers = (game?.squad || [])
+    .filter((s) => s.status === "CALLED" || s.status === "BENCH" || s.status === "STARTING")
+    .map((s) => s.player)
+    .filter((p): p is Player => p !== undefined) || [];
 
   const formation = selectedFormation ? FORMATIONS[selectedFormation] : null;
   const availableFormations = Object.keys(FORMATIONS).filter((key) =>
@@ -175,12 +201,52 @@ export default function LineupPage() {
     );
   }
 
-  if (!game || !formation) {
+  if (error && !game) {
     return (
       <div className="max-w-7xl">
         <PageHeader title="Select Lineup" />
         <Card className="text-center py-12">
-          <p className="text-[#6B7280]">Game not found</p>
+          <p className="text-[#991B1B] mb-4">{error}</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="max-w-7xl">
+        <PageHeader title="Select Lineup" />
+        <Card className="text-center py-12">
+          <p className="text-[#6B7280] mb-4">Game not found</p>
+          {error && <p className="text-sm text-[#991B1B] mb-4">{error}</p>}
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!formation) {
+    return (
+      <div className="max-w-7xl">
+        <PageHeader title="Select Lineup" />
+        <Card className="text-center py-12">
+          <p className="text-[#6B7280] mb-4">Invalid formation selected</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!game.squad || game.squad.length === 0) {
+    return (
+      <div className="max-w-7xl">
+        <PageHeader title="Select Lineup" />
+        <Card className="text-center py-12">
+          <p className="text-[#6B7280] mb-4">No players in squad. Please add players to the squad first.</p>
+          <Button onClick={() => router.push(`/dashboard/games/${params.id}/squad`)}>
+            Go to Squad Selection
+          </Button>
         </Card>
       </div>
     );
