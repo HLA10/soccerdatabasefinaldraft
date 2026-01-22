@@ -71,51 +71,60 @@ export default function LineupPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (params.id) {
-      fetch(`/api/games/${params.id}`)
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(`Failed to load game: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then((data) => {
-          if (!data) {
-            throw new Error("No game data received");
-          }
-          setGame(data);
-          if (data.formations && data.formations.length > 0) {
-            const formation = data.formations[0];
-            setSelectedFormation(
-              `${data.formationType}_${formation.formationName.replace("-", "-")}`
-            );
-          } else {
-            // Set default formation based on match type
-            const defaultFormation =
-              data.formationType === "NINE_V_NINE"
-                ? "NINE_V_NINE_3-3-2"
-                : data.formationType === "SEVEN_V_SEVEN"
-                ? "SEVEN_V_SEVEN_2-3-1"
-                : "ELEVEN_V_ELEVEN_4-3-3";
-            setSelectedFormation(defaultFormation);
-          }
-          if (data.lineupPositions && Array.isArray(data.lineupPositions)) {
-            const positions: Record<string, string> = {};
-            data.lineupPositions.forEach((lp: any) => {
-              if (lp.positionCode && lp.playerId) {
-                positions[lp.positionCode] = lp.playerId;
-              }
-            });
-            setLineup(positions);
-          }
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Error loading game:", err);
-          setError(err.message || "Failed to load game");
-          setLoading(false);
-        });
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    
+    if (!gameId) {
+      setError("Invalid game ID");
+      setLoading(false);
+      return;
     }
+
+    fetch(`/api/games/${gameId}`)
+      .then((res) => {
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error("Game not found");
+          }
+          throw new Error(`Failed to load game: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!data) {
+          throw new Error("No game data received");
+        }
+        setGame(data);
+        if (data.formations && data.formations.length > 0) {
+          const formation = data.formations[0];
+          setSelectedFormation(
+            `${data.formationType}_${formation.formationName.replace("-", "-")}`
+          );
+        } else {
+          // Set default formation based on match type
+          const defaultFormation =
+            data.formationType === "NINE_V_NINE"
+              ? "NINE_V_NINE_3-3-2"
+              : data.formationType === "SEVEN_V_SEVEN"
+              ? "SEVEN_V_SEVEN_2-3-1"
+              : "ELEVEN_V_ELEVEN_4-3-3";
+          setSelectedFormation(defaultFormation);
+        }
+        if (data.lineupPositions && Array.isArray(data.lineupPositions)) {
+          const positions: Record<string, string> = {};
+          data.lineupPositions.forEach((lp: any) => {
+            if (lp.positionCode && lp.playerId) {
+              positions[lp.positionCode] = lp.playerId;
+            }
+          });
+          setLineup(positions);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading game:", err);
+        setError(err.message || "Failed to load game");
+        setLoading(false);
+      });
   }, [params.id]);
 
   const availablePlayers = (game?.squad || [])
@@ -147,6 +156,12 @@ export default function LineupPage() {
   const handleSave = async () => {
     if (!formation) return;
 
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    if (!gameId) {
+      setError("Invalid game ID");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -161,8 +176,17 @@ export default function LineupPage() {
       return;
     }
 
+    // Check for duplicate player assignments
+    const playerIds = positions.map((p) => p.playerId).filter((id) => id);
+    const uniquePlayerIds = new Set(playerIds);
+    if (playerIds.length !== uniquePlayerIds.size) {
+      setError("Each player can only be assigned to one position");
+      setSaving(false);
+      return;
+    }
+
     try {
-      const res = await fetch(`/api/games/${params.id}/lineup`, {
+      const res = await fetch(`/api/games/${gameId}/lineup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -182,7 +206,7 @@ export default function LineupPage() {
         throw new Error(data.error || "Failed to save lineup");
       }
 
-      router.push(`/dashboard/games/${params.id}/match-center`);
+      router.push(`/dashboard/games/${gameId}/match-center`);
     } catch (err: any) {
       setError(err.message);
       setSaving(false);
@@ -244,7 +268,12 @@ export default function LineupPage() {
         <PageHeader title="Select Lineup" />
         <Card className="text-center py-12">
           <p className="text-[#6B7280] mb-4">No players in squad. Please add players to the squad first.</p>
-          <Button onClick={() => router.push(`/dashboard/games/${params.id}/squad`)}>
+          <Button onClick={() => {
+            const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+            if (gameId) {
+              router.push(`/dashboard/games/${gameId}/squad`);
+            }
+          }}>
             Go to Squad Selection
           </Button>
         </Card>
@@ -294,6 +323,16 @@ export default function LineupPage() {
                 const assignedPlayer = availablePlayers.find(
                   (p) => p.id === assignedPlayerId
                 );
+                
+                // Filter out players already assigned to other positions
+                const availableForThisPosition = availablePlayers.filter(
+                  (player) => {
+                    // Include the currently assigned player for this position
+                    if (player.id === assignedPlayerId) return true;
+                    // Exclude players assigned to other positions
+                    return !Object.values(lineup).includes(player.id);
+                  }
+                );
 
                 return (
                   <div
@@ -314,7 +353,7 @@ export default function LineupPage() {
                         className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                       >
                         <option value="">Select player</option>
-                        {availablePlayers.map((player) => (
+                        {availableForThisPosition.map((player) => (
                           <option key={player.id} value={player.id}>
                             {player.firstName} {player.lastName} ({player.position})
                           </option>
