@@ -29,26 +29,42 @@ export async function POST(
       },
     });
 
-    // Create lineup positions
+    // Create lineup positions - filter out duplicates and empty playerIds
+    let uniquePositions: Array<{ playerId: string; positionCode: string; x?: number; y?: number }> = [];
+    
     if (Array.isArray(positions)) {
-      await Promise.all(
-        positions.map((pos: { playerId: string; positionCode: string; x?: number; y?: number }) =>
-          prisma.lineupPosition.create({
-            data: {
-              gameId,
-              playerId: pos.playerId,
-              positionCode: pos.positionCode,
-              x: pos.x || null,
-              y: pos.y || null,
-            },
-          })
-        )
-      );
+      // Filter out empty playerIds and deduplicate by playerId
+      const seenPlayerIds = new Set<string>();
+      uniquePositions = positions
+        .filter((pos: { playerId: string; positionCode: string; x?: number; y?: number }) => {
+          // Skip if playerId is empty or already seen
+          if (!pos.playerId || pos.playerId.trim() === "" || seenPlayerIds.has(pos.playerId)) {
+            return false;
+          }
+          seenPlayerIds.add(pos.playerId);
+          return true;
+        });
+
+      if (uniquePositions.length > 0) {
+        await Promise.all(
+          uniquePositions.map((pos: { playerId: string; positionCode: string; x?: number; y?: number }) =>
+            prisma.lineupPosition.create({
+              data: {
+                gameId,
+                playerId: pos.playerId,
+                positionCode: pos.positionCode,
+                x: pos.x || null,
+                y: pos.y || null,
+              },
+            })
+          )
+        );
+      }
     }
 
-    // Update squad status for starting players
-    if (Array.isArray(positions)) {
-      const startingPlayerIds = positions.map((p: { playerId: string }) => p.playerId);
+    // Update squad status for starting players (use deduplicated positions)
+    if (uniquePositions.length > 0) {
+      const startingPlayerIds = uniquePositions.map((p) => p.playerId);
       
       // Set all squad members to bench first
       await prisma.gameSquad.updateMany({
