@@ -120,12 +120,30 @@ export default function ScoreboardPage() {
   const [matchDuration, setMatchDuration] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  
+  // Event creation state
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventType, setEventType] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [relatedPlayerId, setRelatedPlayerId] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [eventMinute, setEventMinute] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (params.id) {
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    if (gameId) {
       loadGame();
     }
   }, [params.id]);
+  
+  // Update event minute when match duration changes
+  useEffect(() => {
+    if (!showEventForm) {
+      setEventMinute(matchDuration);
+    }
+  }, [matchDuration, showEventForm]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -142,11 +160,17 @@ export default function ScoreboardPage() {
 
   const loadGame = async () => {
     try {
-      const res = await fetch(`/api/games/${params.id}`);
+      const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+      if (!gameId) return;
+      
+      const res = await fetch(`/api/games/${gameId}`);
       const data = await res.json();
       setGame(data);
       if (data.formations && data.formations.length > 0) {
         setSelectedFormation(data.formations[0].formationName);
+      }
+      if (data.homeTeam?.id) {
+        setSelectedTeamId(data.homeTeam.id);
       }
       setLoading(false);
     } catch (err) {
@@ -157,7 +181,10 @@ export default function ScoreboardPage() {
   const handleFormationChange = async (formationName: string) => {
     setSelectedFormation(formationName);
     try {
-      await fetch(`/api/games/${params.id}/formation`, {
+      const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+      if (!gameId) return;
+      
+      await fetch(`/api/games/${gameId}/formation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -172,10 +199,109 @@ export default function ScoreboardPage() {
       console.error("Failed to update formation:", err);
     }
   };
+  
+  const handleCreateEvent = async () => {
+    const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+    if (!gameId) {
+      setError("Invalid game ID");
+      return;
+    }
+    
+    if (!eventType || !selectedPlayerId || !selectedTeamId) {
+      setError("Please fill in all required fields");
+      return;
+    }
+
+    if ((eventType === "SUB_ON" || eventType === "SUB_OFF") && !relatedPlayerId) {
+      setError("Please select both players for substitution");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/games/${gameId}/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          minute: eventMinute,
+          type: eventType,
+          playerId: selectedPlayerId,
+          relatedPlayerId:
+            eventType === "SUB_ON" || eventType === "SUB_OFF"
+              ? relatedPlayerId
+              : eventType === "ASSIST"
+              ? relatedPlayerId || null
+              : null,
+          teamId: selectedTeamId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create event");
+      }
+
+      // Reset form
+      setEventType("");
+      setSelectedPlayerId("");
+      setRelatedPlayerId("");
+      setEventMinute(matchDuration);
+      setShowEventForm(false);
+      setError("");
+
+      // Reload game data
+      await loadGame();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  // Get available players for event creation
+  const startingPlayers = game?.squad
+    .filter((s) => s.status === "STARTING")
+    .map((s) => s.player) || [];
+  const benchPlayers = game?.squad
+    .filter((s) => s.status === "BENCH" || s.status === "CALLED")
+    .map((s) => s.player) || [];
+  const allPlayers = [...startingPlayers, ...benchPlayers];
+  
+  // Filter players by selected team
+  const teamPlayers = allPlayers.filter((player) => {
+    if (!game) return false;
+    if (selectedTeamId === game.homeTeam?.id) {
+      return player.team?.id === game.homeTeam?.id || !player.team;
+    } else if (selectedTeamId === game.awayTeam?.id) {
+      return player.team?.id === game.awayTeam?.id || !player.team;
+    }
+    return true;
+  });
+  
+  // Auto-detect team when player is selected
+  const handlePlayerSelect = (playerId: string) => {
+    setSelectedPlayerId(playerId);
+    const player = allPlayers.find((p) => p.id === playerId);
+    if (player && game) {
+      // Try to determine team from player's team or default to home team
+      if (player.team?.id === game.homeTeam?.id) {
+        setSelectedTeamId(game.homeTeam.id);
+      } else if (player.team?.id === game.awayTeam?.id) {
+        setSelectedTeamId(game.awayTeam.id);
+      } else if (!selectedTeamId && game.homeTeam?.id) {
+        setSelectedTeamId(game.homeTeam.id);
+      }
+    }
+  };
 
   const startMatch = () => {
     setStartTime(new Date());
     setIsRunning(true);
+    // PlayerMinutes will be created automatically by the API when the first event is recorded at minute 0
   };
 
   const stopMatch = () => {
@@ -246,7 +372,10 @@ export default function ScoreboardPage() {
   // Match goals with assists
   const goalsWithAssists = goals.map((goal) => {
     const assist = assists.find(
-      (a) => a.minute === goal.minute && a.team.id === goal.team.id
+      (a) => 
+        a.minute === goal.minute && 
+        a.team.id === goal.team.id &&
+        (a.relatedPlayer?.id === goal.player.id || a.relatedPlayerId === goal.playerId)
     );
     return { goal, assist };
   });
@@ -275,13 +404,19 @@ export default function ScoreboardPage() {
           <div className="flex gap-2">
             <Button
               variant="secondary"
-              onClick={() => router.push(`/dashboard/games/${params.id}/match-center`)}
+              onClick={() => {
+                const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+                if (gameId) router.push(`/dashboard/games/${gameId}/match-center`);
+              }}
             >
               Match Center
             </Button>
             <Button
               variant="secondary"
-              onClick={() => router.push(`/dashboard/games/${params.id}/lineup`)}
+              onClick={() => {
+                const gameId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : null;
+                if (gameId) router.push(`/dashboard/games/${gameId}/lineup`);
+              }}
             >
               Lineup
             </Button>
@@ -324,18 +459,29 @@ export default function ScoreboardPage() {
                 </div>
                 <p className="text-xs text-[#6B7280] mt-1">Match Duration</p>
               </div>
-              <div className="flex gap-2">
-                {!isRunning ? (
-                  <Button onClick={startMatch} className="text-xs px-3 py-1">
-                    Start
+              <div className="flex gap-2 flex-col">
+                <div className="flex gap-2">
+                  {!isRunning ? (
+                    <Button onClick={startMatch} className="text-xs px-3 py-1">
+                      Start
+                    </Button>
+                  ) : (
+                    <Button onClick={stopMatch} variant="secondary" className="text-xs px-3 py-1">
+                      Stop
+                    </Button>
+                  )}
+                  <Button onClick={resetMatch} variant="secondary" className="text-xs px-3 py-1">
+                    Reset
                   </Button>
-                ) : (
-                  <Button onClick={stopMatch} variant="secondary" className="text-xs px-3 py-1">
-                    Stop
-                  </Button>
-                )}
-                <Button onClick={resetMatch} variant="secondary" className="text-xs px-3 py-1">
-                  Reset
+                </div>
+                <Button 
+                  onClick={() => {
+                    setShowEventForm(!showEventForm);
+                    setEventMinute(matchDuration);
+                  }}
+                  className="text-xs px-3 py-1 mt-2"
+                >
+                  {showEventForm ? "Cancel" : "Add Event"}
                 </Button>
               </div>
             </div>
@@ -360,6 +506,138 @@ export default function ScoreboardPage() {
           </div>
         </div>
       </Card>
+
+      {/* Event Creation Form */}
+      {showEventForm && game && (
+        <Card className="mb-6">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-[#111827] mb-4">Add Match Event</h3>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
+                <p className="text-[#991B1B] text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">
+                  Event Type *
+                </label>
+                <select
+                  value={eventType}
+                  onChange={(e) => {
+                    setEventType(e.target.value);
+                    setRelatedPlayerId(""); // Reset related player when event type changes
+                  }}
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                >
+                  <option value="">Select event type</option>
+                  <option value="GOAL">Goal</option>
+                  <option value="ASSIST">Assist</option>
+                  <option value="YELLOW_CARD">Yellow Card</option>
+                  <option value="RED_CARD">Red Card</option>
+                  <option value="SUB_ON">Substitution (Player On)</option>
+                  <option value="SUB_OFF">Substitution (Player Off)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">
+                  Minute *
+                </label>
+                <input
+                  type="number"
+                  value={eventMinute}
+                  onChange={(e) => setEventMinute(parseInt(e.target.value) || 0)}
+                  min="0"
+                  max="120"
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">
+                  Team *
+                </label>
+                <select
+                  value={selectedTeamId}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                >
+                  <option value="">Select team</option>
+                  {game.homeTeam && (
+                    <option value={game.homeTeam.id}>{game.homeTeam.name}</option>
+                  )}
+                  {game.awayTeam && (
+                    <option value={game.awayTeam.id}>
+                      {game.awayTeam.name}{game.opponentAgeGroup ? ` ${game.opponentAgeGroup}` : ''}
+                    </option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#111827] mb-2">
+                  Player *
+                </label>
+                <select
+                  value={selectedPlayerId}
+                  onChange={(e) => handlePlayerSelect(e.target.value)}
+                  className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                >
+                  <option value="">Select player</option>
+                  {teamPlayers.map((player) => (
+                    <option key={player.id} value={player.id}>
+                      {player.firstName} {player.lastName} {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {(eventType === "SUB_ON" || eventType === "SUB_OFF" || eventType === "ASSIST") && (
+                <div>
+                  <label className="block text-sm font-medium text-[#111827] mb-2">
+                    {eventType === "ASSIST" ? "Goal Scorer" : "Related Player"} *
+                  </label>
+                  <select
+                    value={relatedPlayerId}
+                    onChange={(e) => setRelatedPlayerId(e.target.value)}
+                    className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
+                  >
+                    <option value="">Select player</option>
+                    {teamPlayers
+                      .filter((p) => p.id !== selectedPlayerId)
+                      .map((player) => (
+                        <option key={player.id} value={player.id}>
+                          {player.firstName} {player.lastName} {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowEventForm(false);
+                  setEventType("");
+                  setSelectedPlayerId("");
+                  setRelatedPlayerId("");
+                  setError("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateEvent} disabled={saving}>
+                {saving ? "Saving..." : "Add Event"}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Starting Lineup */}
