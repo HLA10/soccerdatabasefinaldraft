@@ -112,7 +112,7 @@ export default function LineupPage() {
   const router = useRouter();
   const [game, setGame] = useState<Game | null>(null);
   const [selectedFormation, setSelectedFormation] = useState<string>("");
-  const [lineup, setLineup] = useState<Record<string, string>>({});
+  const [lineup, setLineup] = useState<Record<number, string>>({}); // Track by index, not position code
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -141,28 +141,45 @@ export default function LineupPage() {
           throw new Error("No game data received");
         }
         setGame(data);
+        
+        // Determine the formation first
+        let formationKey = "";
         if (data.formations && data.formations.length > 0) {
           const formation = data.formations[0];
-          setSelectedFormation(
-            `${data.formationType}_${formation.formationName.replace("-", "-")}`
-          );
+          formationKey = `${data.formationType}_${formation.formationName.replace("-", "-")}`;
         } else {
           // Set default formation based on match type
-          const defaultFormation =
+          formationKey =
             data.formationType === "NINE_V_NINE"
               ? "NINE_V_NINE_3-3-2"
               : data.formationType === "SEVEN_V_SEVEN"
               ? "SEVEN_V_SEVEN_2-3-1"
               : "ELEVEN_V_ELEVEN_4-3-3";
-          setSelectedFormation(defaultFormation);
         }
+        setSelectedFormation(formationKey);
+        
+        // Now map lineup positions to indices based on the selected formation
         if (data.lineupPositions && Array.isArray(data.lineupPositions)) {
-          const positions: Record<string, string> = {};
-          data.lineupPositions.forEach((lp: any) => {
-            if (lp.positionCode && lp.playerId) {
-              positions[lp.positionCode] = lp.playerId;
-            }
-          });
+          const positions: Record<number, string> = {};
+          const formation = FORMATIONS[formationKey];
+          if (formation) {
+            data.lineupPositions.forEach((lp: any) => {
+              if (lp.positionCode && lp.playerId) {
+                // Find all indices where this position code appears
+                const indices: number[] = [];
+                formation.positions.forEach((pos, idx) => {
+                  if (pos === lp.positionCode) {
+                    indices.push(idx);
+                  }
+                });
+                // Assign to the first available index (or first index if all are taken)
+                if (indices.length > 0) {
+                  const availableIndex = indices.find(idx => !positions[idx]) || indices[0];
+                  positions[availableIndex] = lp.playerId;
+                }
+              }
+            });
+          }
           setLineup(positions);
         }
         setLoading(false);
@@ -207,24 +224,25 @@ export default function LineupPage() {
     return count;
   };
 
-  const handlePositionAssign = (positionCode: string, playerId: string) => {
+  const handlePositionAssign = (positionIndex: number, playerId: string) => {
     // Prevent unnecessary updates if the same player is already assigned to this position
-    if (lineup[positionCode] === playerId) {
+    if (lineup[positionIndex] === playerId) {
       return;
     }
     
     const newLineup = { ...lineup };
     // Remove player from any other position (only if assigning a new player)
     if (playerId) {
-      Object.keys(newLineup).forEach((pos) => {
-        if (newLineup[pos] === playerId && pos !== positionCode) {
-          delete newLineup[pos];
+      Object.keys(newLineup).forEach((idx) => {
+        const index = parseInt(idx);
+        if (newLineup[index] === playerId && index !== positionIndex) {
+          delete newLineup[index];
         }
       });
-      newLineup[positionCode] = playerId;
+      newLineup[positionIndex] = playerId;
     } else {
       // If clearing the position, just remove it
-      delete newLineup[positionCode];
+      delete newLineup[positionIndex];
     }
     setLineup(newLineup);
   };
@@ -396,7 +414,7 @@ export default function LineupPage() {
         
         {/* Player circles positioned on field */}
         {formation.positions.map((position, index) => {
-          const assignedPlayerId = lineup[position];
+          const assignedPlayerId = lineup[index];
           const assignedPlayer = availablePlayers.find((p) => p.id === assignedPlayerId);
           const positionIndex = getPositionIndex(position, index);
           const coords = getPositionCoordinates(position, positionIndex);
@@ -493,8 +511,8 @@ export default function LineupPage() {
             )}
 
             <div className="space-y-4">
-              {formation.positions.map((position) => {
-                const assignedPlayerId = lineup[position];
+              {formation.positions.map((position, index) => {
+                const assignedPlayerId = lineup[index];
                 const assignedPlayer = availablePlayers.find(
                   (p) => p.id === assignedPlayerId
                 );
@@ -511,7 +529,7 @@ export default function LineupPage() {
 
                 return (
                   <div
-                    key={position}
+                    key={`${position}-${index}`}
                     className="flex items-center gap-4 p-4 border border-[#E5E7EB] rounded-lg"
                   >
                     <div className="w-24">
@@ -523,7 +541,7 @@ export default function LineupPage() {
                       <select
                         value={assignedPlayerId || ""}
                         onChange={(e) =>
-                          handlePositionAssign(position, e.target.value)
+                          handlePositionAssign(index, e.target.value)
                         }
                         className="w-full border border-[#E5E7EB] rounded-lg px-4 py-2 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#1A73E8]"
                       >
