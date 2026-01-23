@@ -343,10 +343,6 @@ export default function ScoreboardPage() {
     );
   }
 
-  const startingPlayers = game.squad
-    .filter((s) => s.status === "STARTING")
-    .map((s) => s.player);
-
   // Group players by position
   const playersByPosition = startingPlayers.reduce((acc, player) => {
     const pos = player.position || "Unknown";
