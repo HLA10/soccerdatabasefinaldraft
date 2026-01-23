@@ -41,11 +41,19 @@ export default function Navbar() {
         </div>
         <div className="flex items-center space-x-2 lg:space-x-4">
           <span className="text-xs text-[#111827] bg-transparent hidden sm:block">{userEmail}</span>
-          <SignOutButton>
-            <Button variant="outline" className="text-sm px-3 py-1.5">
-              Sign Out
-            </Button>
-          </SignOutButton>
+          <div className="flex flex-col items-end gap-2">
+            <SignOutButton>
+              <Button variant="outline" className="text-sm px-3 py-1.5">
+                Sign Out
+              </Button>
+            </SignOutButton>
+            <div className="w-full border-t border-[#E5E7EB]"></div>
+            <Link href="/dashboard/games/register">
+              <Button variant="secondary" className="text-sm px-3 py-1.5">
+                Event
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </nav>

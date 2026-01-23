@@ -153,7 +153,7 @@ export default function Sidebar() {
 
         {/* Games */}
         <NavSection title="Games">
-          <NavLink href="/dashboard/games/register" pathname={pathname}>Register Game</NavLink>
+          <NavLink href="/dashboard/games/register" pathname={pathname}>Event</NavLink>
           <NavLink href="/dashboard/calendar?type=match" pathname={pathname}>Create Game</NavLink>
         </NavSection>
 
