@@ -15,6 +15,10 @@ interface Player {
   position: string;
   jerseyNumber?: number | null;
   profileImageUrl?: string | null;
+  team?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface MatchEvent {
