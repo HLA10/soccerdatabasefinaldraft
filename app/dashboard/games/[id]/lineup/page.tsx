@@ -261,7 +261,7 @@ export default function LineupPage() {
 
     const positions = formation.positions.map((pos, index) => ({
       positionCode: pos,
-      playerId: lineup[pos] || "",
+      playerId: lineup[index] || "",
     }));
 
     if (positions.some((p) => !p.playerId)) {
