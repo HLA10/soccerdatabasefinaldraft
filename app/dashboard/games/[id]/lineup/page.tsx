@@ -162,9 +162,12 @@ export default function LineupPage() {
         if (data.lineupPositions && Array.isArray(data.lineupPositions)) {
           const positions: Record<number, string> = {};
           const formation = FORMATIONS[formationKey];
+          const usedPlayerIds = new Set<string>(); // Track players already assigned
+          
           if (formation) {
+            // First pass: assign unique players to positions
             data.lineupPositions.forEach((lp: any) => {
-              if (lp.positionCode && lp.playerId) {
+              if (lp.positionCode && lp.playerId && !usedPlayerIds.has(lp.playerId)) {
                 // Find all indices where this position code appears
                 const indices: number[] = [];
                 formation.positions.forEach((pos, idx) => {
@@ -172,10 +175,13 @@ export default function LineupPage() {
                     indices.push(idx);
                   }
                 });
-                // Assign to the first available index (or first index if all are taken)
+                // Assign to the first available index
                 if (indices.length > 0) {
                   const availableIndex = indices.find(idx => !positions[idx]) || indices[0];
-                  positions[availableIndex] = lp.playerId;
+                  if (!positions[availableIndex]) {
+                    positions[availableIndex] = lp.playerId;
+                    usedPlayerIds.add(lp.playerId);
+                  }
                 }
               }
             });
@@ -230,20 +236,31 @@ export default function LineupPage() {
       return;
     }
     
-    const newLineup = { ...lineup };
-    // Remove player from any other position (only if assigning a new player)
-    if (playerId) {
+    // Create a new lineup object
+    const newLineup: Record<number, string> = {};
+    
+    // First, copy all existing assignments except the current position
+    Object.keys(lineup).forEach((idx) => {
+      const index = parseInt(idx);
+      if (index !== positionIndex) {
+        newLineup[index] = lineup[index];
+      }
+    });
+    
+    // If assigning a new player, remove that player from any other position first
+    if (playerId && playerId.trim() !== "") {
+      // Remove this player from all other positions
       Object.keys(newLineup).forEach((idx) => {
         const index = parseInt(idx);
-        if (newLineup[index] === playerId && index !== positionIndex) {
+        if (newLineup[index] === playerId) {
           delete newLineup[index];
         }
       });
+      // Now assign the player to the new position
       newLineup[positionIndex] = playerId;
-    } else {
-      // If clearing the position, just remove it
-      delete newLineup[positionIndex];
     }
+    // If playerId is empty, we're clearing the position (already done by not copying it)
+    
     setLineup(newLineup);
   };
 
@@ -522,8 +539,11 @@ export default function LineupPage() {
                   (player) => {
                     // Include the currently assigned player for this position
                     if (player.id === assignedPlayerId) return true;
-                    // Exclude players assigned to other positions
-                    return !Object.values(lineup).includes(player.id);
+                    // Exclude players assigned to any other position (check all lineup values)
+                    const isAssignedElsewhere = Object.values(lineup).some(
+                      (assignedId, idx) => assignedId === player.id && idx !== index
+                    );
+                    return !isAssignedElsewhere;
                   }
                 );
 
