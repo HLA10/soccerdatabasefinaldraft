@@ -380,6 +380,7 @@ export default function ScoreboardPage() {
   const substitutionsGrouped = substitutions.reduce((acc, event) => {
     if (event.type === "SUB_ON" && event.relatedPlayer) {
       acc.push({
+        id: event.id,
         minute: event.minute,
         playerOn: event.player,
         playerOff: event.relatedPlayer,
@@ -387,7 +388,7 @@ export default function ScoreboardPage() {
       });
     }
     return acc;
-  }, [] as Array<{ minute: number; playerOn: Player; playerOff: Player; team: { id: string; name: string } }>);
+  }, [] as Array<{ id: string; minute: number; playerOn: Player; playerOff: Player; team: { id: string; name: string } }>);
 
   const homeTeamLogo = game.homeTeam.logoUrl || game.homeTeam.club?.logoUrl || null;
   const awayTeamLogo = game.awayTeam.logoUrl || game.awayTeam.club?.logoUrl || game.opponentLogoUrl || null;
@@ -831,11 +832,11 @@ export default function ScoreboardPage() {
               {substitutionsGrouped.length === 0 ? (
                 <p className="text-sm text-[#6B7280] text-center py-8">No substitutions</p>
               ) : (
-                substitutionsGrouped.map((sub, index) => {
+                substitutionsGrouped.map((sub) => {
                   const isHomeTeam = sub.team.id === game.homeTeam.id;
                   return (
                     <div
-                      key={index}
+                      key={sub.id}
                       className="p-4 rounded-lg border border-[#E5E7EB] bg-white"
                     >
                       <div className="flex items-center justify-between mb-3">
